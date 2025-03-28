@@ -136,3 +136,7 @@ Contributions are welcome! Please see [CONTRIBUTING.md](./client/CONTRIBUTING.md
 ## License
 
 This project is licensed under the [MIT License](./client/LICENSE).
+
+## Acknowledgements
+
+This project's UI is built upon [agent-ui](https://github.com/agno-agi/agent-ui), a modern chat interface for AI agents developed by Agno, which is also licensed under the MIT License.
