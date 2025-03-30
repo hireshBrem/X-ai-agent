@@ -158,18 +158,23 @@ const ChatBlankState = () => {
           <div className='flex flex-col gap-3'>
             <StepCard 
               number={1} 
+              title="Login to Twitter" 
+              description="Open a new tab and login to Twitter."
+            />
+            <StepCard 
+              number={2} 
               title="Configure Environment" 
-              description="Set up your environment variables for Twitter integration"
+              description="Install dependencies and set up your environment variables for Twitter integration"
             />
             
             <StepCard 
-              number={2} 
+              number={3} 
               title="Run the Agent" 
               description="Click the 'Run Agent' button to start the agent."
             />
             
             <StepCard 
-              number={3} 
+              number={4} 
               title="Wait for Results" 
               description="Let the agent interact with tweets."
             />

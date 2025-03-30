@@ -59,6 +59,7 @@ const MessageArea = () => {
     setIsLoading(true)
     setShowReplay(false) // Hide previous replay if any
     setReplayEvents(null)
+    
     if (playerInstanceRef.current) {
       playerInstanceRef.current.pause() // Pause existing player if any
     }

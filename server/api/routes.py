@@ -3,8 +3,6 @@ from api.utils import setup_browser, setup_agent
 import requests
 router = APIRouter()
 
-
-
 @router.post("/get-session", status_code=201)
 async def get_session(request: Request):
     data = await request.json()
@@ -60,58 +58,56 @@ async def run_agent(request: Request):
     # Return session 
     return bb_session
 
-@router.post("/get-live-url" , status_code=201)
-async def get_live_url(request: Request):
-    data = await request.json()
+# @router.post("/get-live-url" , status_code=201)
+# async def get_live_url(request: Request):
+#     data = await request.json()
 
-    browserbase_key = data.get("browserbase_key")
-    session_id = data.get("session_id")
+#     browserbase_key = data.get("browserbase_key")
+#     session_id = data.get("session_id")
 
-    url = f"https://api.browserbase.com/v1/sessions/{session_id}/debug"
+#     url = f"https://api.browserbase.com/v1/sessions/{session_id}/debug"
 
-    headers = {"X-BB-API-Key": browserbase_key}
+#     headers = {"X-BB-API-Key": browserbase_key}
 
-    response = requests.get(url, headers=headers)
+#     response = requests.get(url, headers=headers)
 
-    print("URL: ", response.text)
+#     print("URL: ", response.text)
 
-    return response.text
+#     return response.text
 
+# @router.post("/get-session-recording" , status_code=201)
+# async def get_session_recording(request: Request):
+#     data = await request.json()
 
-@router.post("/get-session-recording" , status_code=201)
-async def get_session_recording(request: Request):
-    data = await request.json()
+#     browserbase_key = data.get("browserbase_key")
+#     session_id = data.get("session_id")
 
-    browserbase_key = data.get("browserbase_key")
-    session_id = data.get("session_id")
+#     print(browserbase_key, session_id)
 
-    print(browserbase_key, session_id)
+#     url = f"https://api.browserbase.com/v1/sessions/{session_id}/recording"
 
-    url = f"https://api.browserbase.com/v1/sessions/{session_id}/recording"
+#     headers = {"X-BB-API-Key": browserbase_key}
 
-    headers = {"X-BB-API-Key": browserbase_key}
+#     response = requests.get(url, headers=headers)
 
-    response = requests.get(url, headers=headers)
+#     print(response.text)
 
-    print(response.text)
+#     return response.text[0]
 
-    return response.text[0]
+# @router.post("/get-session-download" , status_code=201)
+# async def get_session_download(request: Request):
+#     data = await request.json()
 
+#     browserbase_key = data.get("browserbase_key")
+#     session_id = data.get("session_id")
 
-@router.post("/get-session-download" , status_code=201)
-async def get_session_download(request: Request):
-    data = await request.json()
+#     url = f"https://api.browserbase.com/v1/sessions/{session_id}/downloads"
 
-    browserbase_key = data.get("browserbase_key")
-    session_id = data.get("session_id")
+#     headers = {"X-BB-API-Key": browserbase_key}
 
-    url = f"https://api.browserbase.com/v1/sessions/{session_id}/downloads"
+#     response = requests.request("GET", url, headers=headers)
 
-    headers = {"X-BB-API-Key": browserbase_key}
+#     print(response.text)
 
-    response = requests.request("GET", url, headers=headers)
-
-    print(response.text)
-
-    return response.text
+#     return response.text
         
