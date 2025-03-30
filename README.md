@@ -6,11 +6,10 @@ Tweet Reply AI Agent is an AI web agent that interacts with tweets, built using 
 
 ## Features
 
-- 🤖 AI-powered browser automation using large language models
+- 🤖 AI-powered browser automation using LLMs
 - 🌐 Integration with Browserbase for reliable browser session management
 - 📱 Modern, responsive UI built with Next.js and Tailwind CSS
-- 🔄 Real-time session recording and playback
-- 🔌 Extensible architecture supporting various LLMs (OpenAI, Anthropic)
+- 🔄 Agent browsing session playback
 
 ## Architecture
 
@@ -134,11 +133,10 @@ uv run main.py
 
 The server provides several API endpoints:
 
-- `POST /api/run-agent` - Run an automation agent with specified keys
-- `POST /api/get-session` - Get details of a specific Browserbase session
-- `POST /api/get-live-url` - Get a live URL to watch the session in real-time
-- `POST /api/get-session-recording` - Get the recording of a session
-- `POST /api/get-session-download` - Get downloads from a session
+- `POST http://localhost:8000/api/run-agent` - Run an automation agent with specified keys
+- `POST http://localhost:8000/api/get-session` - Get details of a specific Browserbase session
+- `POST http://localhost:3000/api/session` - Get session recording for session
+
 
 ## Contributing
 
@@ -152,10 +150,14 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the GPL License - see the LICENSE file for details. Please note the client directory has it's sub license (MIT) from [Agent-UI](https://github.com/agno-agi/agent-ui).
 
 ## Acknowledgments
 
 - [Browserbase](https://browserbase.com) for browser infrastructure
 - [Browser-use](https://github.com/browser-use/browser-use) for browser automation with LLMs
-- [LangChain](https://langchain.com) for LLM integration
+- [Agent-UI](https://github.com/agno-agi/agent-ui) for agent's UI interface
+
+## Final note
+
+Have fun tweeting!
