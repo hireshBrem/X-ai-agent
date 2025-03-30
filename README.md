@@ -1,8 +1,8 @@
-# X-Browser-Agent
+# Tweet Reply AI Agent
 
-X-Browser-Agent is a web automation platform that allows AI agents to interact with web browsers to complete tasks. The project consists of a React-based frontend client and a FastAPI-based backend server that integrates with Browserbase for browser automation.
+Tweet Reply AI Agent is an AI web agent that interacts with tweets, built using Browser Use and Browserbase.
 
-![Demo of X-Browser-Agent](/path/to/screenshot.png)
+![Demo of Tweet Reply AI Agent](/path/to/screenshot.png)
 
 ## Features
 
@@ -16,7 +16,7 @@ X-Browser-Agent is a web automation platform that allows AI agents to interact w
 
 The project is divided into two main components:
 
-### Client (@client)
+### Client
 
 A modern web application built with:
 - **Next.js 15** - React framework with server-side rendering
@@ -26,23 +26,21 @@ A modern web application built with:
 - **Zustand** - State management
 - **Framer Motion** - For animations and transitions
 
-### Server (@server)
+### Server
 
 A Python backend built with:
 - **FastAPI** - High-performance web framework for building APIs
 - **Browser-use** - Library for browser automation with LLMs
 - **Browserbase** - Browser infrastructure for reliable web automation
 - **LangChain** - Framework for developing applications powered by language models
-- **Playwright** - Browser automation library
+- **Playwright** - Under-the-hood browser automation library
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18.0+ (Client)
-- Python 3.10+ (Server)
-- Browserbase API key
-- OpenAI API key or Anthropic API key
+- (free) Browserbase API key + Browserbase Project ID (Get them at https://www.browserbase.com/settings)
+- (free) OpenAI API (Get one at https://platform.openai.com/api-keys)
 
 ### Installation
 
@@ -60,10 +58,19 @@ npm install
 pnpm install
 ```
 
-3. Configure environment variables:
-```
-# Create a .env file in the client directory with:
-NEXT_PUBLIC_API_URL=http://localhost:8000
+3. Configure environment variables (optional - can be done on the interface):
+```bash
+# Copy example env file
+cp .env.example .env
+
+# Then edit the .env file with your values:
+OPENAI_API_KEY=
+BROWSERBASE_API_KEY=
+BROWSERBASE_PROJECT_ID=
+
+NEXT_PUBLIC_BROWSERBASE_API_KEY=
+NEXT_PUBLIC_BROWSERBASE_PROJECT_ID=
+NEXT_PUBLIC_OPENAI_API_KEY=
 ```
 
 4. Start the development server:
@@ -82,27 +89,35 @@ pnpm dev
 cd server
 ```
 
-2. Create and activate a virtual environment:
+2. Create and activate a virtual environment using uv:
 ```bash
-python -m venv .venv
+# Install uv if you don't have it
+pip install uv
+
+# Create and activate virtual environment
+uv venv
 source .venv/bin/activate  # On Windows, use .venv\Scripts\activate
 ```
 
-3. Install dependencies:
+3. Install dependencies with uv (faster):
 ```bash
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 ```
 
-4. Configure environment variables:
-```
-# Create a .env file in the server directory with:
+4. Configure environment variables (optional - if you've configured them on the frontend):
+```bash
+# Copy example env file
+cp .env.example .env
+
+# Then edit the .env file with your values:
 BROWSERBASE_API_KEY=your_browserbase_api_key
 OPENAI_API_KEY=your_openai_api_key
+BROWSERBASE_PROJECT_ID=your_browserbase_project_id
 ```
 
 5. Start the FastAPI server:
 ```bash
-uvicorn main:app --reload
+uv run main.py
 ```
 
 6. The server will be available at http://localhost:8000
@@ -110,11 +125,10 @@ uvicorn main:app --reload
 ## Usage
 
 1. Open your browser and navigate to http://localhost:3000
-2. Enter your Browserbase API key and project ID
-3. Enter your OpenAI API key
-4. Click "Run Agent" to start a browser automation session
-5. Watch as the AI agent navigates the web and completes the specified task
-6. View recordings of completed sessions
+2. Enter your Browserbase API key, project ID and Open AI key
+3. Click "Run Agent" to start a browser automation session
+4. Watch the session recording after task is completed (default task for AI agent is to reply to only 1 tweet - this can be changed)
+5. Customise the agent at [utils.py](server/api/utils.py) in the server's api folder
 
 ## API Endpoints
 
