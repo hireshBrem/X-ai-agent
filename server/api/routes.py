@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from api.utils import setup_browser, setup_agent
 import requests
+
 router = APIRouter()
 
 @router.post("/get-session", status_code=201)
