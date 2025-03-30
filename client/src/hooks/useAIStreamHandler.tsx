@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { APIRoutes } from '@/api/routes'
+import { APIRoutes } from '@/app/api/routes'
 
 import useChatActions from '@/hooks/useChatActions'
 import { usePlaygroundStore } from '../store'

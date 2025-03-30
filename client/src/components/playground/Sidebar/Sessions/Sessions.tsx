@@ -13,6 +13,14 @@ import useSessionLoader from '@/hooks/useSessionLoader'
 import { cn } from '@/lib/utils'
 import { FC } from 'react'
 import { Skeleton } from '@/components/ui/skeleton'
+import useChatActions from '@/hooks/useChatActions'
+import { PlaygroundChatMessage } from '@/types/playground'
+
+interface SessionData {
+  id: string;
+  messages?: PlaygroundChatMessage[];
+  [key: string]: any;
+}
 
 interface SkeletonListProps {
   skeletonCount: number
@@ -48,27 +56,18 @@ const formatDate = (
 }
 
 const Sessions = () => {
-  const [agentId] = useQueryState('agent', {
-    parse: (value) => value || undefined,
-    history: 'push'
-  })
-  const [sessionId] = useQueryState('session')
-  const {
-    selectedEndpoint,
-    isEndpointActive,
-    isEndpointLoading,
-    sessionsData,
-    hydrated,
-    hasStorage,
-    setSessionsData
-  } = usePlaygroundStore()
+  const [sessionId, setSessionId] = useQueryState('session')
   const [isScrolling, setIsScrolling] = useState(false)
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(
     null
   )
   const { getSession, getSessions } = useSessionLoader()
-  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout>>(null)
-  const { isSessionsLoading } = usePlaygroundStore()
+  const scrollTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const { isSessionsLoading, setMessages, messages } = usePlaygroundStore()
+  const { clearChat, addMessage } = useChatActions()
+  const prevMessagesLengthRef = useRef<number>(0);
+
+  const [sessions, setSessions] = useState<SessionData[]>([])
 
   const handleScroll = () => {
     setIsScrolling(true)
@@ -82,93 +81,122 @@ const Sessions = () => {
     }, 1500)
   }
 
-  // Cleanup the scroll timeout when component unmounts
   useEffect(() => {
-    return () => {
-      if (scrollTimeoutRef.current) {
-        clearTimeout(scrollTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  // Load a session on render if a session id exists in url
-  useEffect(() => {
-    if (sessionId && agentId && selectedEndpoint && hydrated) {
-      getSession(sessionId, agentId)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated])
-
-  useEffect(() => {
-    if (!selectedEndpoint || !agentId || !hasStorage) {
-      setSessionsData(() => null)
-      return
-    }
-    if (!isEndpointLoading) {
-      setSessionsData(() => null)
-      getSessions(agentId)
-    }
-  }, [
-    selectedEndpoint,
-    agentId,
-    getSessions,
-    isEndpointLoading,
-    hasStorage,
-    setSessionsData
-  ])
-
-  useEffect(() => {
-    if (sessionId) {
-      setSelectedSessionId(sessionId)
+    // Get sessions from local storage
+    const sessionsData = localStorage.getItem('sessions')
+    console.log('Sessions: ', sessionsData)
+    if (sessionsData) {
+        setSessions(JSON.parse(sessionsData))
+    }else{
+        // Create session array in local storage
+        localStorage.setItem('sessions', JSON.stringify([]))
+        setSessions([])
     }
   }, [sessionId])
 
-  const formattedSessionsData = useMemo(() => {
-    if (!sessionsData || !Array.isArray(sessionsData)) return []
+  // Effect to save messages to the current session
+  useEffect(() => {
+    // Only update if messages have changed (length or content)
+    if (selectedSessionId && messages.length > 0 && prevMessagesLengthRef.current !== messages.length) {
+      prevMessagesLengthRef.current = messages.length;
+      
+      // Get the latest sessions data directly from localStorage to avoid dependency on state
+      const currentSessionsData = localStorage.getItem('sessions');
+      if (currentSessionsData) {
+        const currentSessions = JSON.parse(currentSessionsData) as SessionData[];
+        const updatedSessions = currentSessions.map((session: SessionData) => {
+          if (session.id === selectedSessionId) {
+            return { ...session, messages };
+          }
+          return session;
+        });
+        
+        localStorage.setItem('sessions', JSON.stringify(updatedSessions));
+        // Avoid calling setSessions here to prevent re-renders
+      }
+    }
+  }, [messages, selectedSessionId]);
 
-    return sessionsData.map((entry) => ({
-      ...entry,
-      created_at: entry.created_at,
-      formatted_time: formatDate(entry.created_at, 'natural')
-    }))
-  }, [sessionsData])
+  const handleDeleteSession = (index: number) => {
+    const updatedSessions = sessions.filter((session, i) => i !== index);
+    localStorage.setItem('sessions', JSON.stringify(updatedSessions));
+    setSessions(updatedSessions);
+    
+    // If the deleted session was selected, clear the chat
+    const deletedSession = sessions[index];
+    if (deletedSession && deletedSession.id === selectedSessionId) {
+      clearChat();
+      setSelectedSessionId(null);
+    }
+  }
 
-  const handleSessionClick = useCallback(
-    (id: string) => () => setSelectedSessionId(id),
-    []
-  )
+  const handleSelectSession = (session: SessionData) => {
+    // Load the session data into the chat area
+    if (session && session.messages && Array.isArray(session.messages)) {
+      setMessages(session.messages);
+      setSelectedSessionId(session.id);
+      setSessionId(session.id);
+      prevMessagesLengthRef.current = session.messages.length;
+    } else {
+      // If no messages, initialize with a default welcome message
+      const defaultMessage: PlaygroundChatMessage = {
+        role: 'system',
+        content: 'Browser agent session started',
+        created_at: Math.floor(Date.now() / 1000)
+      };
+      
+      // Update the session with default message
+      const updatedSessions = sessions.map((s: SessionData) => {
+        if (s.id === session.id) {
+          return { ...s, messages: [defaultMessage] };
+        }
+        return s;
+      });
+      
+      localStorage.setItem('sessions', JSON.stringify(updatedSessions));
+      setSessions(updatedSessions);
+      
+      // Update the chat area
+      setMessages([defaultMessage]);
+      setSelectedSessionId(session.id);
+      setSessionId(session.id);
+      prevMessagesLengthRef.current = 1;
+    }
+  }
 
-  if (isSessionsLoading || isEndpointLoading)
-    return (
-      <div className="w-full">
-        <div className="mb-2 text-xs font-medium uppercase">Sessions</div>
-        <div className="mt-4 h-[calc(100vh-325px)] w-full overflow-y-auto">
-          <SkeletonList skeletonCount={5} />
-        </div>
-      </div>
-    )
   return (
     <div className="w-full">
-      <div className="mb-2 w-full text-xs font-medium uppercase">Sessions</div>
+      <div className="mb-2 w-full text-xs font-medium uppercase">Agent Sessions</div>
       <div
         className={`h-[calc(100vh-345px)] overflow-y-auto font-geist transition-all duration-300 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar]:transition-opacity [&::-webkit-scrollbar]:duration-300 ${isScrolling ? '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-background [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:opacity-0' : '[&::-webkit-scrollbar]:opacity-100'}`}
         onScroll={handleScroll}
         onMouseOver={() => setIsScrolling(true)}
         onMouseLeave={handleScroll}
       >
-        {!isEndpointActive ||
-        !hasStorage ||
-        (!isSessionsLoading && (!sessionsData || sessionsData.length === 0)) ? (
+        {sessions.length === 0 ? (
           <SessionBlankState />
         ) : (
           <div className="flex flex-col gap-y-1 pr-1">
-            {formattedSessionsData.map((entry) => (
-              <SessionItem
-                key={entry.session_id}
-                {...entry}
-                isSelected={selectedSessionId === entry.session_id}
-                onSessionClick={handleSessionClick(entry.session_id)}
-              />
+            {
+            sessions.length > 0 && sessions.map((session, index) => (   
+            <div 
+                className={`flex justify-between items-center p-2 rounded-lg hover:bg-gray-100 cursor-pointer ${selectedSessionId === session.id ? 'bg-gray-100' : ''}`} 
+                key={index}
+                onClick={() => handleSelectSession(session)}
+            >
+                <h1 className="text-xs truncate max-w-[80%]" title={session?.id}>
+                    {session?.id ? session.id.substring(0, 10) + '...' : 'No ID'}
+                </h1>
+                <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteSession(index);
+                    }}
+                    className="text-xs text-gray-500 hover:text-red-500"
+                >
+                    Delete
+                </button>
+            </div>
             ))}
           </div>
         )}

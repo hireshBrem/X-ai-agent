@@ -7,7 +7,7 @@ import { ComboboxAgent, type PlaygroundChatMessage } from '@/types/playground'
 import {
   getPlaygroundAgentsAPI,
   getPlaygroundStatusAPI
-} from '@/api/playground'
+} from '@/app/api/playground'
 import { useQueryState } from 'nuqs'
 
 const useChatActions = () => {

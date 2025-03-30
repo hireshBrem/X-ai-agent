@@ -1,3 +1,10 @@
 fastapi==0.103.1
 uvicorn==0.23.2
-pydantic==2.3.0 
+pydantic==1.10.13
+python-dotenv==1.0.0
+langchain-anthropic>=0.1.1,<0.2.0
+langchain-core>=0.1.15,<0.2.0
+langchain-openai>=0.0.1,<0.1.0
+browserbase
+browser-use>=0.1.1,<0.1.2
+playwright==1.40.0 

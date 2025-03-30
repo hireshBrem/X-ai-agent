@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import {
   getPlaygroundSessionAPI,
   getAllPlaygroundSessionsAPI
-} from '@/api/playground'
+} from '@/app/api/playground'
 import { usePlaygroundStore } from '../store'
 import { toast } from 'sonner'
 import {
