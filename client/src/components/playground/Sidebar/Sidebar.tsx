@@ -60,7 +60,14 @@ const EnvVarInput = ({
   href?: string;
 }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
+  const [isValueVisible, setIsValueVisible] = useState(false)
   const inputType = type === "password" && !isPasswordVisible ? "password" : "text"
+  const shouldHideValue = (type !== "password" && !isValueVisible) || (type === "password" && !isPasswordVisible)
+  
+  // Display masked value or actual value based on visibility state
+  const displayValue = shouldHideValue && value ? 
+    value.replace(/./g, '•') : 
+    value
   
   return (
     <div className="w-full space-y-2">
@@ -73,25 +80,23 @@ const EnvVarInput = ({
         {!href && (
           <label className="text-xs font-medium uppercase text-muted">{label}</label>
         )}
-        {type === "password" && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsPasswordVisible(!isPasswordVisible)}
-            className="h-6 p-0 text-xs text-muted"
-          >
-            <Icon 
-              type={isPasswordVisible ? "x" : "check"} 
-              size="xxs" 
-              className="mr-1" 
-            />
-            {isPasswordVisible ? "Hide" : "Show"}
-          </Button>
-        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => type === "password" ? setIsPasswordVisible(!isPasswordVisible) : setIsValueVisible(!isValueVisible)}
+          className="h-6 p-0 text-xs text-muted"
+        >
+          <Icon 
+            type={shouldHideValue ? "check" : "x"} 
+            size="xxs" 
+            className="mr-1" 
+          />
+          {shouldHideValue ? "Show" : "Hide"}
+        </Button>
       </div>
       <Input
-        type={inputType}
-        value={value}
+        type={type === "password" ? inputType : "text"}
+        value={type === "password" ? value : displayValue}
         onChange={(e) => onChange(e.target.value)}
         className="h-9 rounded-xl border border-primary/15 bg-accent text-xs"
         placeholder={placeholder}
@@ -201,6 +206,7 @@ const AgentControls = () => {
           label="Browserbase Project ID"
           value={browserbaseProjectId}
           onChange={setBrowserbaseProjectId}
+          type="text"
           placeholder="Enter your Browserbase project ID"
           href="https://www.browserbase.com/settings"
         />
