@@ -149,8 +149,8 @@ const MessageArea = () => {
             events: replayEvents,
             showController: true, // Show player controls
             autoPlay: true,
-            width: 600, // Adjust width as needed
-            height: 400, // Adjust height as needed
+            width: 800, // Increased from 600
+            height: 600, // Increased from 400
           },
         })
       } catch (error) {

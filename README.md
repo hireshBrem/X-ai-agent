@@ -1,8 +1,8 @@
-# Tweet Reply AI Agent
+# X AI Agent
 
-Tweet Reply AI Agent is an AI web agent that interacts with tweets, built using Browser Use and Browserbase.
+X AI Agent is an AI web agent that interacts with tweets, built using [Browser Use](https://docs.browser-use.com/introduction) and [Browserbase](https://docs.browserbase.com/introduction/what-is-browserbase).
 
-![Demo of Tweet Reply AI Agent](/path/to/screenshot.png)
+![Demo of X AI Agent](/path/to/screenshot.png)
 
 ## Features
 

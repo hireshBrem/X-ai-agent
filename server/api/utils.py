@@ -19,7 +19,7 @@ async def setup_browser(browserbase_key: str, browserbase_project_id: str) -> tu
         project_id=browserbase_project_id,
     )
 
-    browser = Browser(config=BrowserConfig(cdp_url=bb_session.connect_url))
+    browser = Browser(config=BrowserConfig(cdp_url=bb_session.connect_url, chrome_instance_path="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"))
     context = UseBrowserbaseContext(
         browser,
         BrowserContextConfig(
@@ -48,7 +48,7 @@ async def setup_agent(browser: Browser, context: UseBrowserbaseContext, openai_k
     )
 
     task = f"""
-        Find an interesting post about AI, scroll down to the comment section, click the comment button, create a relevant comment and click Reply to post the comment.
+       Go to https://x.com/home, find an interesting post about AI, scroll down to the comment section, click the comment button, create a relevant comment and click Reply to post the comment.
     """
 
     return Agent(
@@ -56,7 +56,7 @@ async def setup_agent(browser: Browser, context: UseBrowserbaseContext, openai_k
         llm=llm,
         browser=browser,
         browser_context=context,
-        initial_actions=[
-            {'open_tab': {'url': 'https://x.com/home'}},
-        ]
+        # initial_actions=[
+        #     {'open_tab': {'url': 'https://x.com/home'}},
+        # ]
     )
