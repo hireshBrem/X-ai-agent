@@ -219,13 +219,13 @@ const MessageArea = () => {
       >
         <StickToBottom.Content className="flex flex-col">
           {/* Video Player Area - Centered in the middle */}
-          <div className="flex-grow flex items-center justify-center">
+          <div className="flex-grow flex items-center justify-center h-full">
             {showReplay ? (
               <div className="w-full max-w-3xl px-4 py-8">
                 <div ref={playerContainerRef} className="rrweb-player-container border rounded-lg overflow-hidden shadow-md"></div>
               </div>
             ) : (
-              sessionId && !isLoading && (
+              sessionId && !isLoading ? (
                 <div className="text-center py-12 px-4">
                   <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 max-w-xl mx-auto">
                     <div className="text-gray-400 mb-4 text-2xl font-medium">🖥️</div>
@@ -235,6 +235,8 @@ const MessageArea = () => {
                     </p>
                   </div>
                 </div>
+              ) : (
+                !isLoading && <Messages messages={messages} />
               )
             )}
             {isLoading && (

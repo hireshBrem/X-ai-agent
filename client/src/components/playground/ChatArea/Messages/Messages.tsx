@@ -152,7 +152,11 @@ const ToolComponent = memo(({ tools }: ToolCallProps) => (
 ToolComponent.displayName = 'ToolComponent'
 const Messages = ({ messages }: MessageListProps) => {
   if (messages.length === 0) {
-    return <ChatBlankState />
+    return (
+      <div className="flex h-full w-full items-center justify-center">
+        <ChatBlankState />
+      </div>
+    )
   }
 
   return (
