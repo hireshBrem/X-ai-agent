@@ -123,9 +123,9 @@ const SessionBlankState = () => {
       <div className="flex flex-col items-center gap-1">
         <HistoryBlankStateIcon />
         <div className="flex flex-col items-center gap-2">
-          <h3 className="text-sm font-medium text-primary">No Session found</h3>
-          <p className="max-w-[210px] text-center text-sm text-muted">
-            {errorMessage}
+          <h3 className="text-sm font-medium text-gray-900">No Session found</h3>
+          <p className="max-w-[210px] text-center text-sm text-muted">  
+            Enter env variables and click the <span className="font-bold">Run Agent</span> button to create a new session.
           </p>
         </div>
       </div>

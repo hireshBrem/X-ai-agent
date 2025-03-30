@@ -1,47 +1,117 @@
-from fastapi import APIRouter, HTTPException
-from datetime import datetime
-from typing import List
-import uuid
-
-from ..models import Item, ItemCreate
-
+from fastapi import APIRouter, HTTPException, Request
+from api.utils import setup_browser, setup_agent
+import requests
 router = APIRouter()
 
-# In-memory database
-items_db = {}
 
 
-@router.get("/items/", response_model=List[Item])
-async def read_items():
-    """Get all items."""
-    return [item for item in items_db.values()]
+@router.post("/get-session", status_code=201)
+async def get_session(request: Request):
+    data = await request.json()
 
+    browserbase_key = data.get("browserbase_key")
+    session_id = data.get("session_id")
 
-@router.get("/items/{item_id}", response_model=Item)
-async def read_item(item_id: int):
-    """Get item by ID."""
-    if item_id not in items_db:
-        raise HTTPException(status_code=404, detail="Item not found")
-    return items_db[item_id]
+    print(browserbase_key, session_id)
 
+    url = f"https://api.browserbase.com/v1/sessions/{session_id}"
 
-@router.post("/items/", response_model=Item, status_code=201)
-async def create_item(item: ItemCreate):
-    """Create a new item."""
-    item_id = len(items_db) + 1
-    items_db[item_id] = Item(
-        id=item_id,
-        title=item.title,
-        description=item.description,
-        created_at=datetime.now()
+    headers = {"X-BB-API-Key": browserbase_key}
+
+    response = requests.request("GET", url, headers=headers)
+
+    print(response.text)
+
+    return response.text
+
+@router.post("/run-agent" , status_code=201)
+async def run_agent(request: Request):
+    data = await request.json()
+    browserbase_key = data.get("browserbase_key")
+    browserbase_project_id = data.get("browserbase_project_id")
+    openai_key = data.get("openai_key")
+
+    print(browserbase_key, browserbase_project_id, openai_key)
+
+    # Setup browser and context
+    browser, context, bb_session = await setup_browser(
+        browserbase_key, 
+        browserbase_project_id
     )
-    return items_db[item_id]
+
+    # Get session
+    session = await context.get_session()
+
+    try:
+        # Setup agent
+        agent = await setup_agent(browser, context, openai_key)
+
+        # Run agent
+        await agent.run()
+
+    finally: 
+        # Close browser
+        await browser.close()
 
 
-@router.delete("/items/{item_id}", status_code=204)
-async def delete_item(item_id: int):
-    """Delete an item."""
-    if item_id not in items_db:
-        raise HTTPException(status_code=404, detail="Item not found")
-    del items_db[item_id]
-    return None 
+    print("Session: ", session)
+    print("BB Session: ", bb_session)
+
+    # Return session 
+    return bb_session
+
+@router.post("/get-live-url" , status_code=201)
+async def get_live_url(request: Request):
+    data = await request.json()
+
+    browserbase_key = data.get("browserbase_key")
+    session_id = data.get("session_id")
+
+    url = f"https://api.browserbase.com/v1/sessions/{session_id}/debug"
+
+    headers = {"X-BB-API-Key": browserbase_key}
+
+    response = requests.get(url, headers=headers)
+
+    print("URL: ", response.text)
+
+    return response.text
+
+
+@router.post("/get-session-recording" , status_code=201)
+async def get_session_recording(request: Request):
+    data = await request.json()
+
+    browserbase_key = data.get("browserbase_key")
+    session_id = data.get("session_id")
+
+    print(browserbase_key, session_id)
+
+    url = f"https://api.browserbase.com/v1/sessions/{session_id}/recording"
+
+    headers = {"X-BB-API-Key": browserbase_key}
+
+    response = requests.get(url, headers=headers)
+
+    print(response.text)
+
+    return response.text[0]
+
+
+@router.post("/get-session-download" , status_code=201)
+async def get_session_download(request: Request):
+    data = await request.json()
+
+    browserbase_key = data.get("browserbase_key")
+    session_id = data.get("session_id")
+
+    url = f"https://api.browserbase.com/v1/sessions/{session_id}/downloads"
+
+    headers = {"X-BB-API-Key": browserbase_key}
+
+    response = requests.request("GET", url, headers=headers)
+
+    print(response.text)
+
+    return response.text
+        

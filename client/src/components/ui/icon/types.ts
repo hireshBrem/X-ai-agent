@@ -36,6 +36,10 @@ export type IconType =
   | 'plus-icon'
   | 'references'
   | 'trash'
+  | 'sun'
+  | 'moon'
+  | 'spinner'
+  | 'browser'
 
 export interface IconProps {
   type: IconType
