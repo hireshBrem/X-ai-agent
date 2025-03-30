@@ -47,9 +47,16 @@ async def setup_agent(browser: Browser, context: UseBrowserbaseContext, openai_k
         openai_api_key=openai_key
     )
 
+    task = f"""
+        Find an interesting post about AI, scroll down to the comment section, click the comment button, create a relevant comment and click Reply to post the comment.
+    """
+
     return Agent(
-        task="go to https://www.paulgraham.com/articles.html and retrieve the title of the latest essay",
+        task=task,
         llm=llm,
         browser=browser,
         browser_context=context,
+        initial_actions=[
+            {'open_tab': {'url': 'https://x.com/home'}},
+        ]
     )
