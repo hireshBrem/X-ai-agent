@@ -1,1 +1,0 @@
-self.__NEXT_FONT_MANIFEST="{\"pages\":{},\"app\":{\"/Users/hireshb/Documents/coding/side-projects/X-Browser-Agent/client/src/app/layout\":[\"static/media/edb9f1eb1c1a7ead-s.p.woff2\",\"static/media/e1612fcd1b6f5251-s.p.woff2\"]},\"appUsingSizeAdjust\":true,\"pagesUsingSizeAdjust\":false}"
