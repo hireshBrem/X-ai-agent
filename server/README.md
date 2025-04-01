@@ -2,12 +2,6 @@
 
 A simple and neat REST API built with FastAPI.
 
-## Features
-
-- RESTful endpoints for item management
-- OpenAPI documentation
-- CORS support
-
 ## Installation
 
 1. Install dependencies:
