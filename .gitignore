@@ -50,4 +50,3 @@ client/*.tsbuildinfo
 client/next-env.d.ts
 
 #Content
-content/
