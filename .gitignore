@@ -50,3 +50,6 @@ client/*.tsbuildinfo
 client/next-env.d.ts
 
 #Content
+content/demo.mp4
+content/demo2.mp4
+content/demo3.mp4
