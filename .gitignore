@@ -53,3 +53,6 @@ client/next-env.d.ts
 *.mp4
 *.mov
 /content/
+
+# Backup
+backup/**/node_modules
