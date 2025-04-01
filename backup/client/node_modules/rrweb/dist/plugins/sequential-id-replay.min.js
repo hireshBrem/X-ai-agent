@@ -1,0 +1,2 @@
+var rrwebSequentialIdReplay=function(e){"use strict";const t={key:"_sid",warnOnMissingId:!0},u=l=>{const{key:n,warnOnMissingId:r}=l?Object.assign({},t,l):t;let i=1;return{handler(a){if(n in a){const s=a[n];s!==i?console.error(`[sequential-id-plugin]: expect to get an id with value "${i}", but got "${s}"`):i++}else r&&console.warn(`[sequential-id-plugin]: failed to get id in key: "${n}"`)}}};return e.getReplaySequentialIdPlugin=u,Object.defineProperty(e,"__esModule",{value:!0}),e}({});
+//# sourceMappingURL=sequential-id-replay.min.js.map

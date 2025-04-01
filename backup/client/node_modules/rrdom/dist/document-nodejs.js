@@ -1,0 +1,884 @@
+var RRDocument = (function (exports) {
+    'use strict';
+
+    /*! *****************************************************************************
+    Copyright (c) Microsoft Corporation.
+
+    Permission to use, copy, modify, and/or distribute this software for any
+    purpose with or without fee is hereby granted.
+
+    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+    REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+    AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+    INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+    LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+    OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+    PERFORMANCE OF THIS SOFTWARE.
+    ***************************************************************************** */
+    /* global Reflect, Promise */
+
+    var extendStatics = function(d, b) {
+        extendStatics = Object.setPrototypeOf ||
+            ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
+            function (d, b) { for (var p in b) if (Object.prototype.hasOwnProperty.call(b, p)) d[p] = b[p]; };
+        return extendStatics(d, b);
+    };
+
+    function __extends(d, b) {
+        if (typeof b !== "function" && b !== null)
+            throw new TypeError("Class extends value " + String(b) + " is not a constructor or null");
+        extendStatics(d, b);
+        function __() { this.constructor = d; }
+        d.prototype = b === null ? Object.create(b) : (__.prototype = b.prototype, new __());
+    }
+
+    function __awaiter(thisArg, _arguments, P, generator) {
+        function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+        return new (P || (P = Promise))(function (resolve, reject) {
+            function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+            function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+            function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+            step((generator = generator.apply(thisArg, _arguments || [])).next());
+        });
+    }
+
+    function __generator(thisArg, body) {
+        var _ = { label: 0, sent: function() { if (t[0] & 1) throw t[1]; return t[1]; }, trys: [], ops: [] }, f, y, t, g;
+        return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() { return this; }), g;
+        function verb(n) { return function (v) { return step([n, v]); }; }
+        function step(op) {
+            if (f) throw new TypeError("Generator is already executing.");
+            while (_) try {
+                if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+                if (y = 0, t) op = [op[0] & 2, t.value];
+                switch (op[0]) {
+                    case 0: case 1: t = op; break;
+                    case 4: _.label++; return { value: op[1], done: false };
+                    case 5: _.label++; y = op[1]; op = [0]; continue;
+                    case 7: op = _.ops.pop(); _.trys.pop(); continue;
+                    default:
+                        if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) { _ = 0; continue; }
+                        if (op[0] === 3 && (!t || (op[1] > t[0] && op[1] < t[3]))) { _.label = op[1]; break; }
+                        if (op[0] === 6 && _.label < t[1]) { _.label = t[1]; t = op; break; }
+                        if (t && _.label < t[2]) { _.label = t[2]; _.ops.push(op); break; }
+                        if (t[2]) _.ops.pop();
+                        _.trys.pop(); continue;
+                }
+                op = body.call(thisArg, _);
+            } catch (e) { op = [6, e]; y = 0; } finally { f = t = 0; }
+            if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
+        }
+    }
+
+    var NodeType;
+    (function (NodeType) {
+        NodeType[NodeType["Document"] = 0] = "Document";
+        NodeType[NodeType["DocumentType"] = 1] = "DocumentType";
+        NodeType[NodeType["Element"] = 2] = "Element";
+        NodeType[NodeType["Text"] = 3] = "Text";
+        NodeType[NodeType["CDATA"] = 4] = "CDATA";
+        NodeType[NodeType["Comment"] = 5] = "Comment";
+    })(NodeType || (NodeType = {}));
+
+    function parseCSSText(cssText) {
+        var res = {};
+        var listDelimiter = /;(?![^(]*\))/g;
+        var propertyDelimiter = /:(.+)/;
+        cssText.split(listDelimiter).forEach(function (item) {
+            if (item) {
+                var tmp = item.split(propertyDelimiter);
+                tmp.length > 1 && (res[camelize(tmp[0].trim())] = tmp[1].trim());
+            }
+        });
+        return res;
+    }
+    function toCSSText(style) {
+        var properties = [];
+        for (var name_1 in style) {
+            var value = style[name_1];
+            if (typeof value !== 'string')
+                continue;
+            var normalizedName = hyphenate(name_1);
+            properties.push(normalizedName + ":" + value + ";");
+        }
+        return properties.join(' ');
+    }
+    var camelizeRE = /-(\w)/g;
+    var camelize = function (str) {
+        return str.replace(camelizeRE, function (_, c) { return (c ? c.toUpperCase() : ''); });
+    };
+    var hyphenateRE = /\B([A-Z])/g;
+    var hyphenate = function (str) {
+        return str.replace(hyphenateRE, '-$1').toLowerCase();
+    };
+
+    var nwsapi = require('nwsapi');
+    var cssom = require('cssom');
+    var RRNode = (function () {
+        function RRNode() {
+            this.children = [];
+            this.parentElement = null;
+            this.parentNode = null;
+            this.ownerDocument = null;
+            this.ELEMENT_NODE = 1;
+            this.TEXT_NODE = 3;
+        }
+        Object.defineProperty(RRNode.prototype, "firstChild", {
+            get: function () {
+                return this.children[0];
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRNode.prototype, "nodeType", {
+            get: function () {
+                if (this instanceof RRDocument)
+                    return NodeType.Document;
+                if (this instanceof RRDocumentType)
+                    return NodeType.DocumentType;
+                if (this instanceof RRElement)
+                    return NodeType.Element;
+                if (this instanceof RRText)
+                    return NodeType.Text;
+                if (this instanceof RRCDATASection)
+                    return NodeType.CDATA;
+                if (this instanceof RRComment)
+                    return NodeType.Comment;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRNode.prototype, "childNodes", {
+            get: function () {
+                return this.children;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        RRNode.prototype.appendChild = function (newChild) {
+            throw new Error("RRDomException: Failed to execute 'appendChild' on 'RRNode': This RRNode type does not support this method.");
+        };
+        RRNode.prototype.insertBefore = function (newChild, refChild) {
+            throw new Error("RRDomException: Failed to execute 'insertBefore' on 'RRNode': This RRNode type does not support this method.");
+        };
+        RRNode.prototype.contains = function (node) {
+            if (node === this)
+                return true;
+            for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+                var child = _a[_i];
+                if (child.contains(node))
+                    return true;
+            }
+            return false;
+        };
+        RRNode.prototype.removeChild = function (node) {
+            var indexOfChild = this.children.indexOf(node);
+            if (indexOfChild !== -1) {
+                this.children.splice(indexOfChild, 1);
+                node.parentElement = null;
+                node.parentNode = null;
+            }
+        };
+        RRNode.prototype.toString = function (nodeName) {
+            var _a;
+            return (JSON.stringify((_a = this.__sn) === null || _a === void 0 ? void 0 : _a.id) || '') + " " + nodeName;
+        };
+        return RRNode;
+    }());
+    var RRWindow = (function () {
+        function RRWindow() {
+            this.scrollLeft = 0;
+            this.scrollTop = 0;
+        }
+        RRWindow.prototype.scrollTo = function (options) {
+            if (!options)
+                return;
+            if (typeof options.left === 'number')
+                this.scrollLeft = options.left;
+            if (typeof options.top === 'number')
+                this.scrollTop = options.top;
+        };
+        return RRWindow;
+    }());
+    var RRDocument = (function (_super) {
+        __extends(RRDocument, _super);
+        function RRDocument() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.mirror = new Map();
+            return _this;
+        }
+        Object.defineProperty(RRDocument.prototype, "nwsapi", {
+            get: function () {
+                if (!this._nwsapi) {
+                    this._nwsapi = nwsapi({
+                        document: this,
+                        DOMException: null,
+                    });
+                    this._nwsapi.configure({
+                        LOGERRORS: false,
+                        IDS_DUPES: true,
+                        MIXEDCASE: true,
+                    });
+                }
+                return this._nwsapi;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRDocument.prototype, "documentElement", {
+            get: function () {
+                return this.children.find(function (node) { return node instanceof RRElement && node.tagName === 'HTML'; });
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRDocument.prototype, "body", {
+            get: function () {
+                var _a;
+                return (((_a = this.documentElement) === null || _a === void 0 ? void 0 : _a.children.find(function (node) { return node instanceof RRElement && node.tagName === 'BODY'; })) || null);
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRDocument.prototype, "head", {
+            get: function () {
+                var _a;
+                return (((_a = this.documentElement) === null || _a === void 0 ? void 0 : _a.children.find(function (node) { return node instanceof RRElement && node.tagName === 'HEAD'; })) || null);
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRDocument.prototype, "implementation", {
+            get: function () {
+                return this;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRDocument.prototype, "firstElementChild", {
+            get: function () {
+                return this.documentElement;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        RRDocument.prototype.appendChild = function (childNode) {
+            var nodeType = childNode.nodeType;
+            if (nodeType === NodeType.Element || nodeType === NodeType.DocumentType) {
+                if (this.children.some(function (s) { return s.nodeType === nodeType; })) {
+                    throw new Error("RRDomException: Failed to execute 'appendChild' on 'RRNode': Only one " + (nodeType === NodeType.Element ? 'RRElement' : 'RRDoctype') + " on RRDocument allowed.");
+                }
+            }
+            childNode.parentElement = null;
+            childNode.parentNode = this;
+            childNode.ownerDocument = this;
+            this.children.push(childNode);
+            return childNode;
+        };
+        RRDocument.prototype.insertBefore = function (newChild, refChild) {
+            if (refChild === null)
+                return this.appendChild(newChild);
+            var childIndex = this.children.indexOf(refChild);
+            if (childIndex == -1)
+                throw new Error("Failed to execute 'insertBefore' on 'RRNode': The RRNode before which the new node is to be inserted is not a child of this RRNode.");
+            this.children.splice(childIndex, 0, newChild);
+            newChild.parentElement = null;
+            newChild.parentNode = this;
+            newChild.ownerDocument = this;
+            return newChild;
+        };
+        RRDocument.prototype.querySelectorAll = function (selectors) {
+            return this.nwsapi.select(selectors);
+        };
+        RRDocument.prototype.getElementsByTagName = function (tagName) {
+            if (this.documentElement)
+                return this.documentElement.getElementsByTagName(tagName);
+            return [];
+        };
+        RRDocument.prototype.getElementsByClassName = function (className) {
+            if (this.documentElement)
+                return this.documentElement.getElementsByClassName(className);
+            return [];
+        };
+        RRDocument.prototype.getElementById = function (elementId) {
+            if (this.documentElement)
+                return this.documentElement.getElementById(elementId);
+            return null;
+        };
+        RRDocument.prototype.createDocument = function (_namespace, _qualifiedName, _doctype) {
+            return new RRDocument();
+        };
+        RRDocument.prototype.createDocumentType = function (qualifiedName, publicId, systemId) {
+            var documentTypeNode = new RRDocumentType(qualifiedName, publicId, systemId);
+            documentTypeNode.ownerDocument = this;
+            return documentTypeNode;
+        };
+        RRDocument.prototype.createElement = function (tagName) {
+            var upperTagName = tagName.toUpperCase();
+            var element;
+            switch (upperTagName) {
+                case 'AUDIO':
+                case 'VIDEO':
+                    element = new RRMediaElement(upperTagName);
+                    break;
+                case 'IFRAME':
+                    element = new RRIframeElement(upperTagName);
+                    break;
+                case 'IMG':
+                    element = new RRImageElement('IMG');
+                    break;
+                case 'CANVAS':
+                    element = new RRCanvasElement('CANVAS');
+                    break;
+                case 'STYLE':
+                    element = new RRStyleElement('STYLE');
+                    break;
+                default:
+                    element = new RRElement(upperTagName);
+                    break;
+            }
+            element.ownerDocument = this;
+            return element;
+        };
+        RRDocument.prototype.createElementNS = function (_namespaceURI, qualifiedName) {
+            return this.createElement(qualifiedName);
+        };
+        RRDocument.prototype.createComment = function (data) {
+            var commentNode = new RRComment(data);
+            commentNode.ownerDocument = this;
+            return commentNode;
+        };
+        RRDocument.prototype.createCDATASection = function (data) {
+            var sectionNode = new RRCDATASection(data);
+            sectionNode.ownerDocument = this;
+            return sectionNode;
+        };
+        RRDocument.prototype.createTextNode = function (data) {
+            var textNode = new RRText(data);
+            textNode.ownerDocument = this;
+            return textNode;
+        };
+        RRDocument.prototype.open = function () {
+            this.children = [];
+        };
+        RRDocument.prototype.close = function () { };
+        RRDocument.prototype.buildFromDom = function (dom) {
+            var notSerializedId = -1;
+            var NodeTypeMap = {};
+            NodeTypeMap[document.DOCUMENT_NODE] = NodeType.Document;
+            NodeTypeMap[document.DOCUMENT_TYPE_NODE] = NodeType.DocumentType;
+            NodeTypeMap[document.ELEMENT_NODE] = NodeType.Element;
+            NodeTypeMap[document.TEXT_NODE] = NodeType.Text;
+            NodeTypeMap[document.CDATA_SECTION_NODE] = NodeType.CDATA;
+            NodeTypeMap[document.COMMENT_NODE] = NodeType.Comment;
+            function getValidTagName(element) {
+                if (element instanceof HTMLFormElement) {
+                    return 'FORM';
+                }
+                return element.tagName.toUpperCase().trim();
+            }
+            var walk = function (node) {
+                var serializedNodeWithId = node.__sn;
+                var rrNode;
+                if (!serializedNodeWithId) {
+                    serializedNodeWithId = {
+                        type: NodeTypeMap[node.nodeType],
+                        textContent: '',
+                        id: notSerializedId,
+                    };
+                    notSerializedId -= 1;
+                    node.__sn = serializedNodeWithId;
+                }
+                if (!this.mirror.has(serializedNodeWithId.id)) {
+                    switch (node.nodeType) {
+                        case node.DOCUMENT_NODE:
+                            if (serializedNodeWithId.rootId &&
+                                serializedNodeWithId.rootId !== serializedNodeWithId.id)
+                                rrNode = this.createDocument();
+                            else
+                                rrNode = this;
+                            break;
+                        case node.DOCUMENT_TYPE_NODE:
+                            var documentType = node;
+                            rrNode = this.createDocumentType(documentType.name, documentType.publicId, documentType.systemId);
+                            break;
+                        case node.ELEMENT_NODE:
+                            var elementNode = node;
+                            var tagName = getValidTagName(elementNode);
+                            rrNode = this.createElement(tagName);
+                            var rrElement = rrNode;
+                            for (var _i = 0, _a = Array.from(elementNode.attributes); _i < _a.length; _i++) {
+                                var _b = _a[_i], name_1 = _b.name, value = _b.value;
+                                rrElement.attributes[name_1] = value;
+                            }
+                            if (tagName === 'INPUT' ||
+                                tagName === 'TEXTAREA' ||
+                                tagName === 'SELECT') {
+                                var value = elementNode.value;
+                                if (['RADIO', 'CHECKBOX', 'SUBMIT', 'BUTTON'].includes(rrElement.attributes.type) &&
+                                    value) {
+                                    rrElement.attributes.value = value;
+                                }
+                                else if (elementNode.checked) {
+                                    rrElement.attributes.checked = elementNode.checked;
+                                }
+                            }
+                            if (tagName === 'OPTION') {
+                                var selectValue = elementNode
+                                    .parentElement;
+                                if (rrElement.attributes.value ===
+                                    selectValue.value) {
+                                    rrElement.attributes.selected = elementNode.selected;
+                                }
+                            }
+                            if (tagName === 'CANVAS') {
+                                rrElement.attributes.rr_dataURL = elementNode.toDataURL();
+                            }
+                            if (tagName === 'AUDIO' || tagName === 'VIDEO') {
+                                var rrMediaElement = rrElement;
+                                rrMediaElement.paused = elementNode.paused;
+                                rrMediaElement.currentTime = elementNode.currentTime;
+                            }
+                            if (elementNode.scrollLeft) {
+                                rrElement.scrollLeft = elementNode.scrollLeft;
+                            }
+                            if (elementNode.scrollTop) {
+                                rrElement.scrollTop = elementNode.scrollTop;
+                            }
+                            break;
+                        case node.TEXT_NODE:
+                            rrNode = this.createTextNode(node.textContent);
+                            break;
+                        case node.CDATA_SECTION_NODE:
+                            rrNode = this.createCDATASection();
+                            break;
+                        case node.COMMENT_NODE:
+                            rrNode = this.createComment(node.textContent || '');
+                            break;
+                        default:
+                            return;
+                    }
+                    rrNode.__sn = serializedNodeWithId;
+                    this.mirror.set(serializedNodeWithId.id, rrNode);
+                }
+                else {
+                    rrNode = this.mirror.get(serializedNodeWithId.id);
+                    rrNode.parentElement = null;
+                    rrNode.parentNode = null;
+                    rrNode.children = [];
+                }
+                var parentNode = node.parentElement || node.parentNode;
+                if (parentNode) {
+                    var parentSN = parentNode.__sn;
+                    var parentRRNode = this.mirror.get(parentSN.id);
+                    parentRRNode.appendChild(rrNode);
+                    rrNode.parentNode = parentRRNode;
+                    rrNode.parentElement =
+                        parentRRNode instanceof RRElement ? parentRRNode : null;
+                }
+                if (serializedNodeWithId.type === NodeType.Document ||
+                    serializedNodeWithId.type === NodeType.Element) {
+                    node.childNodes.forEach(function (node) { return walk(node); });
+                }
+            }.bind(this);
+            if (dom) {
+                this.destroyTree();
+                walk(dom);
+            }
+        };
+        RRDocument.prototype.destroyTree = function () {
+            this.children = [];
+            this.mirror.clear();
+        };
+        RRDocument.prototype.toString = function () {
+            return _super.prototype.toString.call(this, 'RRDocument');
+        };
+        return RRDocument;
+    }(RRNode));
+    var RRDocumentType = (function (_super) {
+        __extends(RRDocumentType, _super);
+        function RRDocumentType(qualifiedName, publicId, systemId) {
+            var _this = _super.call(this) || this;
+            _this.name = qualifiedName;
+            _this.publicId = publicId;
+            _this.systemId = systemId;
+            return _this;
+        }
+        RRDocumentType.prototype.toString = function () {
+            return _super.prototype.toString.call(this, 'RRDocumentType');
+        };
+        return RRDocumentType;
+    }(RRNode));
+    var RRElement = (function (_super) {
+        __extends(RRElement, _super);
+        function RRElement(tagName) {
+            var _this = _super.call(this) || this;
+            _this.attributes = {};
+            _this.scrollLeft = 0;
+            _this.scrollTop = 0;
+            _this.shadowRoot = null;
+            _this.tagName = tagName;
+            return _this;
+        }
+        Object.defineProperty(RRElement.prototype, "classList", {
+            get: function () {
+                var _this = this;
+                return new ClassList(this.attributes.class, function (newClassName) {
+                    _this.attributes.class = newClassName;
+                });
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRElement.prototype, "id", {
+            get: function () {
+                return this.attributes.id;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRElement.prototype, "className", {
+            get: function () {
+                return this.attributes.class || '';
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRElement.prototype, "textContent", {
+            get: function () {
+                return '';
+            },
+            set: function (newText) { },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRElement.prototype, "style", {
+            get: function () {
+                var _this = this;
+                var style = (this.attributes.style
+                    ? parseCSSText(this.attributes.style)
+                    : {});
+                style.setProperty = function (name, value) {
+                    var normalizedName = camelize(name);
+                    if (!value)
+                        delete style[normalizedName];
+                    else
+                        style[normalizedName] = value;
+                    _this.attributes.style = toCSSText(style);
+                };
+                style.scrollBehavior = '';
+                return style;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRElement.prototype, "firstElementChild", {
+            get: function () {
+                for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+                    var child = _a[_i];
+                    if (child instanceof RRElement)
+                        return child;
+                }
+                return null;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        Object.defineProperty(RRElement.prototype, "nextElementSibling", {
+            get: function () {
+                var parentNode = this.parentNode;
+                if (!parentNode)
+                    return null;
+                var siblings = parentNode.children;
+                var index = siblings.indexOf(this);
+                for (var i = index + 1; i < siblings.length; i++)
+                    if (siblings[i] instanceof RRElement)
+                        return siblings[i];
+                return null;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        RRElement.prototype.getAttribute = function (name) {
+            var upperName = name && name.toLowerCase();
+            if (upperName in this.attributes)
+                return this.attributes[upperName];
+            return null;
+        };
+        RRElement.prototype.setAttribute = function (name, attribute) {
+            this.attributes[name.toLowerCase()] = attribute;
+        };
+        RRElement.prototype.hasAttribute = function (name) {
+            return (name && name.toLowerCase()) in this.attributes;
+        };
+        RRElement.prototype.setAttributeNS = function (_namespace, qualifiedName, value) {
+            this.setAttribute(qualifiedName, value);
+        };
+        RRElement.prototype.removeAttribute = function (name) {
+            delete this.attributes[name];
+        };
+        RRElement.prototype.appendChild = function (newChild) {
+            this.children.push(newChild);
+            newChild.parentNode = this;
+            newChild.parentElement = this;
+            newChild.ownerDocument = this.ownerDocument;
+            return newChild;
+        };
+        RRElement.prototype.insertBefore = function (newChild, refChild) {
+            if (refChild === null)
+                return this.appendChild(newChild);
+            var childIndex = this.children.indexOf(refChild);
+            if (childIndex == -1)
+                throw new Error("Failed to execute 'insertBefore' on 'RRNode': The RRNode before which the new node is to be inserted is not a child of this RRNode.");
+            this.children.splice(childIndex, 0, newChild);
+            newChild.parentElement = null;
+            newChild.parentNode = this;
+            newChild.ownerDocument = this.ownerDocument;
+            return newChild;
+        };
+        RRElement.prototype.querySelectorAll = function (selectors) {
+            if (this.ownerDocument !== null) {
+                return this.ownerDocument.nwsapi.select(selectors, this);
+            }
+            return [];
+        };
+        RRElement.prototype.getElementById = function (elementId) {
+            if (this instanceof RRElement && this.id === elementId)
+                return this;
+            for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+                var child = _a[_i];
+                if (child instanceof RRElement) {
+                    var result = child.getElementById(elementId);
+                    if (result !== null)
+                        return result;
+                }
+            }
+            return null;
+        };
+        RRElement.prototype.getElementsByClassName = function (className) {
+            var _this = this;
+            var elements = [];
+            var queryClassList = new ClassList(className);
+            if (this instanceof RRElement &&
+                queryClassList.filter(function (queriedClassName) {
+                    return _this.classList.some(function (name) { return name === queriedClassName; });
+                }).length == queryClassList.length)
+                elements.push(this);
+            for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+                var child = _a[_i];
+                if (child instanceof RRElement)
+                    elements = elements.concat(child.getElementsByClassName(className));
+            }
+            return elements;
+        };
+        RRElement.prototype.getElementsByTagName = function (tagName) {
+            var elements = [];
+            var normalizedTagName = tagName.toUpperCase();
+            if (this instanceof RRElement && this.tagName === normalizedTagName)
+                elements.push(this);
+            for (var _i = 0, _a = this.children; _i < _a.length; _i++) {
+                var child = _a[_i];
+                if (child instanceof RRElement)
+                    elements = elements.concat(child.getElementsByTagName(tagName));
+            }
+            return elements;
+        };
+        RRElement.prototype.dispatchEvent = function (_event) {
+            return true;
+        };
+        RRElement.prototype.attachShadow = function (init) {
+            this.shadowRoot = init.mode === 'open' ? this : null;
+            return this;
+        };
+        RRElement.prototype.toString = function () {
+            var attributeString = '';
+            for (var attribute in this.attributes) {
+                attributeString += attribute + "=\"" + this.attributes[attribute] + "\" ";
+            }
+            return _super.prototype.toString.call(this, this.tagName) + " " + attributeString;
+        };
+        return RRElement;
+    }(RRNode));
+    var RRImageElement = (function (_super) {
+        __extends(RRImageElement, _super);
+        function RRImageElement() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        return RRImageElement;
+    }(RRElement));
+    var RRMediaElement = (function (_super) {
+        __extends(RRMediaElement, _super);
+        function RRMediaElement() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this.currentTime = 0;
+            _this.paused = true;
+            return _this;
+        }
+        RRMediaElement.prototype.play = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    this.paused = false;
+                    return [2];
+                });
+            });
+        };
+        RRMediaElement.prototype.pause = function () {
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    this.paused = true;
+                    return [2];
+                });
+            });
+        };
+        return RRMediaElement;
+    }(RRElement));
+    var RRCanvasElement = (function (_super) {
+        __extends(RRCanvasElement, _super);
+        function RRCanvasElement() {
+            return _super !== null && _super.apply(this, arguments) || this;
+        }
+        RRCanvasElement.prototype.getContext = function () {
+            return null;
+        };
+        return RRCanvasElement;
+    }(RRElement));
+    var RRStyleElement = (function (_super) {
+        __extends(RRStyleElement, _super);
+        function RRStyleElement() {
+            var _this = _super !== null && _super.apply(this, arguments) || this;
+            _this._sheet = null;
+            return _this;
+        }
+        Object.defineProperty(RRStyleElement.prototype, "sheet", {
+            get: function () {
+                if (!this._sheet) {
+                    var result = '';
+                    for (var _i = 0, _a = this.childNodes; _i < _a.length; _i++) {
+                        var child = _a[_i];
+                        if (child.nodeType === NodeType.Text)
+                            result += child.textContent;
+                    }
+                    this._sheet = cssom.parse(result);
+                }
+                return this._sheet;
+            },
+            enumerable: false,
+            configurable: true
+        });
+        return RRStyleElement;
+    }(RRElement));
+    var RRIframeElement = (function (_super) {
+        __extends(RRIframeElement, _super);
+        function RRIframeElement(tagName) {
+            var _this = _super.call(this, tagName) || this;
+            _this.width = '';
+            _this.height = '';
+            _this.src = '';
+            _this.contentDocument = new RRDocument();
+            _this.contentWindow = new RRWindow();
+            var htmlElement = _this.contentDocument.createElement('HTML');
+            _this.contentDocument.appendChild(htmlElement);
+            htmlElement.appendChild(_this.contentDocument.createElement('HEAD'));
+            htmlElement.appendChild(_this.contentDocument.createElement('BODY'));
+            return _this;
+        }
+        return RRIframeElement;
+    }(RRElement));
+    var RRText = (function (_super) {
+        __extends(RRText, _super);
+        function RRText(data) {
+            var _this = _super.call(this) || this;
+            _this.textContent = data;
+            return _this;
+        }
+        RRText.prototype.toString = function () {
+            return _super.prototype.toString.call(this, 'RRText') + " text=" + JSON.stringify(this.textContent);
+        };
+        return RRText;
+    }(RRNode));
+    var RRComment = (function (_super) {
+        __extends(RRComment, _super);
+        function RRComment(data) {
+            var _this = _super.call(this) || this;
+            _this.data = data;
+            return _this;
+        }
+        RRComment.prototype.toString = function () {
+            return _super.prototype.toString.call(this, 'RRComment') + " data=" + JSON.stringify(this.data);
+        };
+        return RRComment;
+    }(RRNode));
+    var RRCDATASection = (function (_super) {
+        __extends(RRCDATASection, _super);
+        function RRCDATASection(data) {
+            var _this = _super.call(this) || this;
+            _this.data = data;
+            return _this;
+        }
+        RRCDATASection.prototype.toString = function () {
+            return _super.prototype.toString.call(this, 'RRCDATASection') + " data=" + JSON.stringify(this.data);
+        };
+        return RRCDATASection;
+    }(RRNode));
+    var ClassList = (function (_super) {
+        __extends(ClassList, _super);
+        function ClassList(classText, onChange) {
+            var _this = _super.call(this) || this;
+            _this.add = function () {
+                var classNames = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    classNames[_i] = arguments[_i];
+                }
+                for (var _a = 0, classNames_1 = classNames; _a < classNames_1.length; _a++) {
+                    var item = classNames_1[_a];
+                    var className = String(item);
+                    if (_super.prototype.indexOf.call(_this, className) >= 0)
+                        continue;
+                    _super.prototype.push.call(_this, className);
+                }
+                _this.onChange && _this.onChange(_super.prototype.join.call(_this, ' '));
+            };
+            _this.remove = function () {
+                var classNames = [];
+                for (var _i = 0; _i < arguments.length; _i++) {
+                    classNames[_i] = arguments[_i];
+                }
+                for (var _a = 0, classNames_2 = classNames; _a < classNames_2.length; _a++) {
+                    var item = classNames_2[_a];
+                    var className = String(item);
+                    var index = _super.prototype.indexOf.call(_this, className);
+                    if (index < 0)
+                        continue;
+                    _super.prototype.splice.call(_this, index, 1);
+                }
+                _this.onChange && _this.onChange(_super.prototype.join.call(_this, ' '));
+            };
+            if (classText) {
+                var classes = classText.trim().split(/\s+/);
+                _super.prototype.push.apply(_this, classes);
+            }
+            _this.onChange = onChange;
+            return _this;
+        }
+        return ClassList;
+    }(Array));
+
+    exports.RRCDATASection = RRCDATASection;
+    exports.RRCanvasElement = RRCanvasElement;
+    exports.RRComment = RRComment;
+    exports.RRDocument = RRDocument;
+    exports.RRDocumentType = RRDocumentType;
+    exports.RRElement = RRElement;
+    exports.RRIframeElement = RRIframeElement;
+    exports.RRImageElement = RRImageElement;
+    exports.RRMediaElement = RRMediaElement;
+    exports.RRNode = RRNode;
+    exports.RRStyleElement = RRStyleElement;
+    exports.RRText = RRText;
+    exports.RRWindow = RRWindow;
+
+    Object.defineProperty(exports, '__esModule', { value: true });
+
+    return exports;
+
+})({});

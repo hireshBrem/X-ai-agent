@@ -1,0 +1,1131 @@
+var vdom = (function (exports) {
+    'use strict';
+
+    var NodeType;
+    (function (NodeType) {
+        NodeType[NodeType["Document"] = 0] = "Document";
+        NodeType[NodeType["DocumentType"] = 1] = "DocumentType";
+        NodeType[NodeType["Element"] = 2] = "Element";
+        NodeType[NodeType["Text"] = 3] = "Text";
+        NodeType[NodeType["CDATA"] = 4] = "CDATA";
+        NodeType[NodeType["Comment"] = 5] = "Comment";
+    })(NodeType || (NodeType = {}));
+    var Mirror$1 = (function () {
+        function Mirror() {
+            this.idNodeMap = new Map();
+            this.nodeMetaMap = new WeakMap();
+        }
+        Mirror.prototype.getId = function (n) {
+            var _a;
+            if (!n)
+                return -1;
+            var id = (_a = this.getMeta(n)) === null || _a === void 0 ? void 0 : _a.id;
+            return id !== null && id !== void 0 ? id : -1;
+        };
+        Mirror.prototype.getNode = function (id) {
+            return this.idNodeMap.get(id) || null;
+        };
+        Mirror.prototype.getIds = function () {
+            return Array.from(this.idNodeMap.keys());
+        };
+        Mirror.prototype.getMeta = function (n) {
+            return this.nodeMetaMap.get(n) || null;
+        };
+        Mirror.prototype.removeNodeFromMap = function (n) {
+            var _this = this;
+            var id = this.getId(n);
+            this.idNodeMap["delete"](id);
+            if (n.childNodes) {
+                n.childNodes.forEach(function (childNode) {
+                    return _this.removeNodeFromMap(childNode);
+                });
+            }
+        };
+        Mirror.prototype.has = function (id) {
+            return this.idNodeMap.has(id);
+        };
+        Mirror.prototype.hasNode = function (node) {
+            return this.nodeMetaMap.has(node);
+        };
+        Mirror.prototype.add = function (n, meta) {
+            var id = meta.id;
+            this.idNodeMap.set(id, n);
+            this.nodeMetaMap.set(n, meta);
+        };
+        Mirror.prototype.replace = function (id, n) {
+            this.idNodeMap.set(id, n);
+        };
+        Mirror.prototype.reset = function () {
+            this.idNodeMap = new Map();
+            this.nodeMetaMap = new WeakMap();
+        };
+        return Mirror;
+    }());
+    function createMirror$1() {
+        return new Mirror$1();
+    }
+
+    function parseCSSText(cssText) {
+        const res = {};
+        const listDelimiter = /;(?![^(]*\))/g;
+        const propertyDelimiter = /:(.+)/;
+        const comment = /\/\*.*?\*\//g;
+        cssText
+            .replace(comment, '')
+            .split(listDelimiter)
+            .forEach(function (item) {
+            if (item) {
+                const tmp = item.split(propertyDelimiter);
+                tmp.length > 1 && (res[camelize(tmp[0].trim())] = tmp[1].trim());
+            }
+        });
+        return res;
+    }
+    function toCSSText(style) {
+        const properties = [];
+        for (const name in style) {
+            const value = style[name];
+            if (typeof value !== 'string')
+                continue;
+            const normalizedName = hyphenate(name);
+            properties.push(`${normalizedName}: ${value};`);
+        }
+        return properties.join(' ');
+    }
+    const camelizeRE = /-([a-z])/g;
+    const CUSTOM_PROPERTY_REGEX = /^--[a-zA-Z0-9-]+$/;
+    const camelize = (str) => {
+        if (CUSTOM_PROPERTY_REGEX.test(str))
+            return str;
+        return str.replace(camelizeRE, (_, c) => (c ? c.toUpperCase() : ''));
+    };
+    const hyphenateRE = /\B([A-Z])/g;
+    const hyphenate = (str) => {
+        return str.replace(hyphenateRE, '-$1').toLowerCase();
+    };
+
+    class BaseRRNode {
+        constructor(...args) {
+            this.childNodes = [];
+            this.parentElement = null;
+            this.parentNode = null;
+            this.ELEMENT_NODE = exports.NodeType.ELEMENT_NODE;
+            this.TEXT_NODE = exports.NodeType.TEXT_NODE;
+        }
+        get firstChild() {
+            return this.childNodes[0] || null;
+        }
+        get lastChild() {
+            return this.childNodes[this.childNodes.length - 1] || null;
+        }
+        get nextSibling() {
+            const parentNode = this.parentNode;
+            if (!parentNode)
+                return null;
+            const siblings = parentNode.childNodes;
+            const index = siblings.indexOf(this);
+            return siblings[index + 1] || null;
+        }
+        contains(node) {
+            if (node === this)
+                return true;
+            for (const child of this.childNodes) {
+                if (child.contains(node))
+                    return true;
+            }
+            return false;
+        }
+        appendChild(_newChild) {
+            throw new Error(`RRDomException: Failed to execute 'appendChild' on 'RRNode': This RRNode type does not support this method.`);
+        }
+        insertBefore(_newChild, _refChild) {
+            throw new Error(`RRDomException: Failed to execute 'insertBefore' on 'RRNode': This RRNode type does not support this method.`);
+        }
+        removeChild(node) {
+            throw new Error(`RRDomException: Failed to execute 'removeChild' on 'RRNode': This RRNode type does not support this method.`);
+        }
+        toString() {
+            return 'RRNode';
+        }
+    }
+    function BaseRRDocumentImpl(RRNodeClass) {
+        return class BaseRRDocument extends RRNodeClass {
+            constructor() {
+                super(...arguments);
+                this.nodeType = exports.NodeType.DOCUMENT_NODE;
+                this.nodeName = '#document';
+                this.compatMode = 'CSS1Compat';
+                this.RRNodeType = NodeType.Document;
+                this.textContent = null;
+            }
+            get documentElement() {
+                return (this.childNodes.find((node) => node.RRNodeType === NodeType.Element &&
+                    node.tagName === 'HTML') || null);
+            }
+            get body() {
+                var _a;
+                return (((_a = this.documentElement) === null || _a === void 0 ? void 0 : _a.childNodes.find((node) => node.RRNodeType === NodeType.Element &&
+                    node.tagName === 'BODY')) || null);
+            }
+            get head() {
+                var _a;
+                return (((_a = this.documentElement) === null || _a === void 0 ? void 0 : _a.childNodes.find((node) => node.RRNodeType === NodeType.Element &&
+                    node.tagName === 'HEAD')) || null);
+            }
+            get implementation() {
+                return this;
+            }
+            get firstElementChild() {
+                return this.documentElement;
+            }
+            appendChild(childNode) {
+                const nodeType = childNode.RRNodeType;
+                if (nodeType === NodeType.Element ||
+                    nodeType === NodeType.DocumentType) {
+                    if (this.childNodes.some((s) => s.RRNodeType === nodeType)) {
+                        throw new Error(`RRDomException: Failed to execute 'appendChild' on 'RRNode': Only one ${nodeType === NodeType.Element ? 'RRElement' : 'RRDoctype'} on RRDocument allowed.`);
+                    }
+                }
+                childNode.parentElement = null;
+                childNode.parentNode = this;
+                this.childNodes.push(childNode);
+                return childNode;
+            }
+            insertBefore(newChild, refChild) {
+                const nodeType = newChild.RRNodeType;
+                if (nodeType === NodeType.Element ||
+                    nodeType === NodeType.DocumentType) {
+                    if (this.childNodes.some((s) => s.RRNodeType === nodeType)) {
+                        throw new Error(`RRDomException: Failed to execute 'insertBefore' on 'RRNode': Only one ${nodeType === NodeType.Element ? 'RRElement' : 'RRDoctype'} on RRDocument allowed.`);
+                    }
+                }
+                if (refChild === null)
+                    return this.appendChild(newChild);
+                const childIndex = this.childNodes.indexOf(refChild);
+                if (childIndex == -1)
+                    throw new Error("Failed to execute 'insertBefore' on 'RRNode': The RRNode before which the new node is to be inserted is not a child of this RRNode.");
+                this.childNodes.splice(childIndex, 0, newChild);
+                newChild.parentElement = null;
+                newChild.parentNode = this;
+                return newChild;
+            }
+            removeChild(node) {
+                const indexOfChild = this.childNodes.indexOf(node);
+                if (indexOfChild === -1)
+                    throw new Error("Failed to execute 'removeChild' on 'RRDocument': The RRNode to be removed is not a child of this RRNode.");
+                this.childNodes.splice(indexOfChild, 1);
+                node.parentElement = null;
+                node.parentNode = null;
+                return node;
+            }
+            open() {
+                this.childNodes = [];
+            }
+            close() {
+            }
+            write(content) {
+                let publicId;
+                if (content ===
+                    '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "">')
+                    publicId = '-//W3C//DTD XHTML 1.0 Transitional//EN';
+                else if (content ===
+                    '<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN" "">')
+                    publicId = '-//W3C//DTD HTML 4.0 Transitional//EN';
+                if (publicId) {
+                    const doctype = this.createDocumentType('html', publicId, '');
+                    this.open();
+                    this.appendChild(doctype);
+                }
+            }
+            createDocument(_namespace, _qualifiedName, _doctype) {
+                return new BaseRRDocument();
+            }
+            createDocumentType(qualifiedName, publicId, systemId) {
+                const doctype = new (BaseRRDocumentTypeImpl(BaseRRNode))(qualifiedName, publicId, systemId);
+                doctype.ownerDocument = this;
+                return doctype;
+            }
+            createElement(tagName) {
+                const element = new (BaseRRElementImpl(BaseRRNode))(tagName);
+                element.ownerDocument = this;
+                return element;
+            }
+            createElementNS(_namespaceURI, qualifiedName) {
+                return this.createElement(qualifiedName);
+            }
+            createTextNode(data) {
+                const text = new (BaseRRTextImpl(BaseRRNode))(data);
+                text.ownerDocument = this;
+                return text;
+            }
+            createComment(data) {
+                const comment = new (BaseRRCommentImpl(BaseRRNode))(data);
+                comment.ownerDocument = this;
+                return comment;
+            }
+            createCDATASection(data) {
+                const CDATASection = new (BaseRRCDATASectionImpl(BaseRRNode))(data);
+                CDATASection.ownerDocument = this;
+                return CDATASection;
+            }
+            toString() {
+                return 'RRDocument';
+            }
+        };
+    }
+    function BaseRRDocumentTypeImpl(RRNodeClass) {
+        return class BaseRRDocumentType extends RRNodeClass {
+            constructor(qualifiedName, publicId, systemId) {
+                super();
+                this.nodeType = exports.NodeType.DOCUMENT_TYPE_NODE;
+                this.RRNodeType = NodeType.DocumentType;
+                this.textContent = null;
+                this.name = qualifiedName;
+                this.publicId = publicId;
+                this.systemId = systemId;
+                this.nodeName = qualifiedName;
+            }
+            toString() {
+                return 'RRDocumentType';
+            }
+        };
+    }
+    function BaseRRElementImpl(RRNodeClass) {
+        return class BaseRRElement extends RRNodeClass {
+            constructor(tagName) {
+                super();
+                this.nodeType = exports.NodeType.ELEMENT_NODE;
+                this.RRNodeType = NodeType.Element;
+                this.attributes = {};
+                this.shadowRoot = null;
+                this.tagName = tagName.toUpperCase();
+                this.nodeName = tagName.toUpperCase();
+            }
+            get textContent() {
+                let result = '';
+                this.childNodes.forEach((node) => (result += node.textContent));
+                return result;
+            }
+            set textContent(textContent) {
+                this.childNodes = [this.ownerDocument.createTextNode(textContent)];
+            }
+            get classList() {
+                return new ClassList(this.attributes.class, (newClassName) => {
+                    this.attributes.class = newClassName;
+                });
+            }
+            get id() {
+                return this.attributes.id || '';
+            }
+            get className() {
+                return this.attributes.class || '';
+            }
+            get style() {
+                const style = (this.attributes.style
+                    ? parseCSSText(this.attributes.style)
+                    : {});
+                const hyphenateRE = /\B([A-Z])/g;
+                style.setProperty = (name, value, priority) => {
+                    if (hyphenateRE.test(name))
+                        return;
+                    const normalizedName = camelize(name);
+                    if (!value)
+                        delete style[normalizedName];
+                    else
+                        style[normalizedName] = value;
+                    if (priority === 'important')
+                        style[normalizedName] += ' !important';
+                    this.attributes.style = toCSSText(style);
+                };
+                style.removeProperty = (name) => {
+                    if (hyphenateRE.test(name))
+                        return '';
+                    const normalizedName = camelize(name);
+                    const value = style[normalizedName] || '';
+                    delete style[normalizedName];
+                    this.attributes.style = toCSSText(style);
+                    return value;
+                };
+                return style;
+            }
+            getAttribute(name) {
+                return this.attributes[name] || null;
+            }
+            setAttribute(name, attribute) {
+                this.attributes[name] = attribute;
+            }
+            setAttributeNS(_namespace, qualifiedName, value) {
+                this.setAttribute(qualifiedName, value);
+            }
+            removeAttribute(name) {
+                delete this.attributes[name];
+            }
+            appendChild(newChild) {
+                this.childNodes.push(newChild);
+                newChild.parentNode = this;
+                newChild.parentElement = this;
+                return newChild;
+            }
+            insertBefore(newChild, refChild) {
+                if (refChild === null)
+                    return this.appendChild(newChild);
+                const childIndex = this.childNodes.indexOf(refChild);
+                if (childIndex == -1)
+                    throw new Error("Failed to execute 'insertBefore' on 'RRNode': The RRNode before which the new node is to be inserted is not a child of this RRNode.");
+                this.childNodes.splice(childIndex, 0, newChild);
+                newChild.parentElement = this;
+                newChild.parentNode = this;
+                return newChild;
+            }
+            removeChild(node) {
+                const indexOfChild = this.childNodes.indexOf(node);
+                if (indexOfChild === -1)
+                    throw new Error("Failed to execute 'removeChild' on 'RRElement': The RRNode to be removed is not a child of this RRNode.");
+                this.childNodes.splice(indexOfChild, 1);
+                node.parentElement = null;
+                node.parentNode = null;
+                return node;
+            }
+            attachShadow(_init) {
+                const shadowRoot = this.ownerDocument.createElement('SHADOWROOT');
+                this.shadowRoot = shadowRoot;
+                return shadowRoot;
+            }
+            dispatchEvent(_event) {
+                return true;
+            }
+            toString() {
+                let attributeString = '';
+                for (const attribute in this.attributes) {
+                    attributeString += `${attribute}="${this.attributes[attribute]}" `;
+                }
+                return `${this.tagName} ${attributeString}`;
+            }
+        };
+    }
+    function BaseRRMediaElementImpl(RRElementClass) {
+        return class BaseRRMediaElement extends RRElementClass {
+            attachShadow(_init) {
+                throw new Error(`RRDomException: Failed to execute 'attachShadow' on 'RRElement': This RRElement does not support attachShadow`);
+            }
+            play() {
+                this.paused = false;
+            }
+            pause() {
+                this.paused = true;
+            }
+        };
+    }
+    function BaseRRTextImpl(RRNodeClass) {
+        return class BaseRRText extends RRNodeClass {
+            constructor(data) {
+                super();
+                this.nodeType = exports.NodeType.TEXT_NODE;
+                this.nodeName = '#text';
+                this.RRNodeType = NodeType.Text;
+                this.data = data;
+            }
+            get textContent() {
+                return this.data;
+            }
+            set textContent(textContent) {
+                this.data = textContent;
+            }
+            toString() {
+                return `RRText text=${JSON.stringify(this.data)}`;
+            }
+        };
+    }
+    function BaseRRCommentImpl(RRNodeClass) {
+        return class BaseRRComment extends RRNodeClass {
+            constructor(data) {
+                super();
+                this.nodeType = exports.NodeType.COMMENT_NODE;
+                this.nodeName = '#comment';
+                this.RRNodeType = NodeType.Comment;
+                this.data = data;
+            }
+            get textContent() {
+                return this.data;
+            }
+            set textContent(textContent) {
+                this.data = textContent;
+            }
+            toString() {
+                return `RRComment text=${JSON.stringify(this.data)}`;
+            }
+        };
+    }
+    function BaseRRCDATASectionImpl(RRNodeClass) {
+        return class BaseRRCDATASection extends RRNodeClass {
+            constructor(data) {
+                super();
+                this.nodeName = '#cdata-section';
+                this.nodeType = exports.NodeType.CDATA_SECTION_NODE;
+                this.RRNodeType = NodeType.CDATA;
+                this.data = data;
+            }
+            get textContent() {
+                return this.data;
+            }
+            set textContent(textContent) {
+                this.data = textContent;
+            }
+            toString() {
+                return `RRCDATASection data=${JSON.stringify(this.data)}`;
+            }
+        };
+    }
+    class ClassList {
+        constructor(classText, onChange) {
+            this.classes = [];
+            this.add = (...classNames) => {
+                for (const item of classNames) {
+                    const className = String(item);
+                    if (this.classes.indexOf(className) >= 0)
+                        continue;
+                    this.classes.push(className);
+                }
+                this.onChange && this.onChange(this.classes.join(' '));
+            };
+            this.remove = (...classNames) => {
+                this.classes = this.classes.filter((item) => classNames.indexOf(item) === -1);
+                this.onChange && this.onChange(this.classes.join(' '));
+            };
+            if (classText) {
+                const classes = classText.trim().split(/\s+/);
+                this.classes.push(...classes);
+            }
+            this.onChange = onChange;
+        }
+    }
+    exports.NodeType = void 0;
+    (function (NodeType) {
+        NodeType[NodeType["PLACEHOLDER"] = 0] = "PLACEHOLDER";
+        NodeType[NodeType["ELEMENT_NODE"] = 1] = "ELEMENT_NODE";
+        NodeType[NodeType["ATTRIBUTE_NODE"] = 2] = "ATTRIBUTE_NODE";
+        NodeType[NodeType["TEXT_NODE"] = 3] = "TEXT_NODE";
+        NodeType[NodeType["CDATA_SECTION_NODE"] = 4] = "CDATA_SECTION_NODE";
+        NodeType[NodeType["ENTITY_REFERENCE_NODE"] = 5] = "ENTITY_REFERENCE_NODE";
+        NodeType[NodeType["ENTITY_NODE"] = 6] = "ENTITY_NODE";
+        NodeType[NodeType["PROCESSING_INSTRUCTION_NODE"] = 7] = "PROCESSING_INSTRUCTION_NODE";
+        NodeType[NodeType["COMMENT_NODE"] = 8] = "COMMENT_NODE";
+        NodeType[NodeType["DOCUMENT_NODE"] = 9] = "DOCUMENT_NODE";
+        NodeType[NodeType["DOCUMENT_TYPE_NODE"] = 10] = "DOCUMENT_TYPE_NODE";
+        NodeType[NodeType["DOCUMENT_FRAGMENT_NODE"] = 11] = "DOCUMENT_FRAGMENT_NODE";
+    })(exports.NodeType || (exports.NodeType = {}));
+
+    const NAMESPACES = {
+        svg: 'http://www.w3.org/2000/svg',
+        'xlink:href': 'http://www.w3.org/1999/xlink',
+        xmlns: 'http://www.w3.org/2000/xmlns/',
+    };
+    function diff(oldTree, newTree, replayer, rrnodeMirror) {
+        const oldChildren = oldTree.childNodes;
+        const newChildren = newTree.childNodes;
+        rrnodeMirror =
+            rrnodeMirror ||
+                newTree.mirror ||
+                newTree.ownerDocument.mirror;
+        if (oldChildren.length > 0 || newChildren.length > 0) {
+            diffChildren(Array.from(oldChildren), newChildren, oldTree, replayer, rrnodeMirror);
+        }
+        let inputDataToApply = null, scrollDataToApply = null;
+        switch (newTree.RRNodeType) {
+            case NodeType.Document: {
+                const newRRDocument = newTree;
+                scrollDataToApply = newRRDocument.scrollData;
+                break;
+            }
+            case NodeType.Element: {
+                const oldElement = oldTree;
+                const newRRElement = newTree;
+                diffProps(oldElement, newRRElement, rrnodeMirror);
+                scrollDataToApply = newRRElement.scrollData;
+                inputDataToApply = newRRElement.inputData;
+                switch (newRRElement.tagName) {
+                    case 'AUDIO':
+                    case 'VIDEO': {
+                        const oldMediaElement = oldTree;
+                        const newMediaRRElement = newRRElement;
+                        if (newMediaRRElement.paused !== undefined)
+                            newMediaRRElement.paused
+                                ? oldMediaElement.pause()
+                                : oldMediaElement.play();
+                        if (newMediaRRElement.muted !== undefined)
+                            oldMediaElement.muted = newMediaRRElement.muted;
+                        if (newMediaRRElement.volume !== undefined)
+                            oldMediaElement.volume = newMediaRRElement.volume;
+                        if (newMediaRRElement.currentTime !== undefined)
+                            oldMediaElement.currentTime = newMediaRRElement.currentTime;
+                        break;
+                    }
+                    case 'CANVAS':
+                        newTree.canvasMutations.forEach((canvasMutation) => replayer.applyCanvas(canvasMutation.event, canvasMutation.mutation, oldTree));
+                        break;
+                    case 'STYLE':
+                        applyVirtualStyleRulesToNode(oldElement, newTree.rules);
+                        break;
+                }
+                if (newRRElement.shadowRoot) {
+                    if (!oldElement.shadowRoot)
+                        oldElement.attachShadow({ mode: 'open' });
+                    const oldChildren = oldElement.shadowRoot.childNodes;
+                    const newChildren = newRRElement.shadowRoot.childNodes;
+                    if (oldChildren.length > 0 || newChildren.length > 0)
+                        diffChildren(Array.from(oldChildren), newChildren, oldElement.shadowRoot, replayer, rrnodeMirror);
+                }
+                break;
+            }
+            case NodeType.Text:
+            case NodeType.Comment:
+            case NodeType.CDATA:
+                if (oldTree.textContent !==
+                    newTree.data)
+                    oldTree.textContent = newTree.data;
+                break;
+        }
+        scrollDataToApply && replayer.applyScroll(scrollDataToApply, true);
+        inputDataToApply && replayer.applyInput(inputDataToApply);
+        if (newTree.nodeName === 'IFRAME') {
+            const oldContentDocument = oldTree.contentDocument;
+            const newIFrameElement = newTree;
+            if (oldContentDocument) {
+                const sn = rrnodeMirror.getMeta(newIFrameElement.contentDocument);
+                if (sn) {
+                    replayer.mirror.add(oldContentDocument, Object.assign({}, sn));
+                }
+                diff(oldContentDocument, newIFrameElement.contentDocument, replayer, rrnodeMirror);
+            }
+        }
+    }
+    function diffProps(oldTree, newTree, rrnodeMirror) {
+        const oldAttributes = oldTree.attributes;
+        const newAttributes = newTree.attributes;
+        for (const name in newAttributes) {
+            const newValue = newAttributes[name];
+            const sn = rrnodeMirror.getMeta(newTree);
+            if (sn && 'isSVG' in sn && sn.isSVG && NAMESPACES[name])
+                oldTree.setAttributeNS(NAMESPACES[name], name, newValue);
+            else if (newTree.tagName === 'CANVAS' && name === 'rr_dataURL') {
+                const image = document.createElement('img');
+                image.src = newValue;
+                image.onload = () => {
+                    const ctx = oldTree.getContext('2d');
+                    if (ctx) {
+                        ctx.drawImage(image, 0, 0, image.width, image.height);
+                    }
+                };
+            }
+            else
+                oldTree.setAttribute(name, newValue);
+        }
+        for (const { name } of Array.from(oldAttributes))
+            if (!(name in newAttributes))
+                oldTree.removeAttribute(name);
+        newTree.scrollLeft && (oldTree.scrollLeft = newTree.scrollLeft);
+        newTree.scrollTop && (oldTree.scrollTop = newTree.scrollTop);
+    }
+    function diffChildren(oldChildren, newChildren, parentNode, replayer, rrnodeMirror) {
+        var _a, _b;
+        let oldStartIndex = 0, oldEndIndex = oldChildren.length - 1, newStartIndex = 0, newEndIndex = newChildren.length - 1;
+        let oldStartNode = oldChildren[oldStartIndex], oldEndNode = oldChildren[oldEndIndex], newStartNode = newChildren[newStartIndex], newEndNode = newChildren[newEndIndex];
+        let oldIdToIndex = undefined, indexInOld;
+        while (oldStartIndex <= oldEndIndex && newStartIndex <= newEndIndex) {
+            if (oldStartNode === undefined) {
+                oldStartNode = oldChildren[++oldStartIndex];
+            }
+            else if (oldEndNode === undefined) {
+                oldEndNode = oldChildren[--oldEndIndex];
+            }
+            else if (replayer.mirror.getId(oldStartNode) === rrnodeMirror.getId(newStartNode)) {
+                diff(oldStartNode, newStartNode, replayer, rrnodeMirror);
+                oldStartNode = oldChildren[++oldStartIndex];
+                newStartNode = newChildren[++newStartIndex];
+            }
+            else if (replayer.mirror.getId(oldEndNode) === rrnodeMirror.getId(newEndNode)) {
+                diff(oldEndNode, newEndNode, replayer, rrnodeMirror);
+                oldEndNode = oldChildren[--oldEndIndex];
+                newEndNode = newChildren[--newEndIndex];
+            }
+            else if (replayer.mirror.getId(oldStartNode) === rrnodeMirror.getId(newEndNode)) {
+                parentNode.insertBefore(oldStartNode, oldEndNode.nextSibling);
+                diff(oldStartNode, newEndNode, replayer, rrnodeMirror);
+                oldStartNode = oldChildren[++oldStartIndex];
+                newEndNode = newChildren[--newEndIndex];
+            }
+            else if (replayer.mirror.getId(oldEndNode) === rrnodeMirror.getId(newStartNode)) {
+                parentNode.insertBefore(oldEndNode, oldStartNode);
+                diff(oldEndNode, newStartNode, replayer, rrnodeMirror);
+                oldEndNode = oldChildren[--oldEndIndex];
+                newStartNode = newChildren[++newStartIndex];
+            }
+            else {
+                if (!oldIdToIndex) {
+                    oldIdToIndex = {};
+                    for (let i = oldStartIndex; i <= oldEndIndex; i++) {
+                        const oldChild = oldChildren[i];
+                        if (oldChild && replayer.mirror.hasNode(oldChild))
+                            oldIdToIndex[replayer.mirror.getId(oldChild)] = i;
+                    }
+                }
+                indexInOld = oldIdToIndex[rrnodeMirror.getId(newStartNode)];
+                if (indexInOld) {
+                    const nodeToMove = oldChildren[indexInOld];
+                    parentNode.insertBefore(nodeToMove, oldStartNode);
+                    diff(nodeToMove, newStartNode, replayer, rrnodeMirror);
+                    oldChildren[indexInOld] = undefined;
+                }
+                else {
+                    const newNode = createOrGetNode(newStartNode, replayer.mirror, rrnodeMirror);
+                    if (((_a = replayer.mirror.getMeta(parentNode)) === null || _a === void 0 ? void 0 : _a.type) === NodeType.Document &&
+                        ((_b = replayer.mirror.getMeta(newNode)) === null || _b === void 0 ? void 0 : _b.type) === NodeType.Element &&
+                        parentNode.documentElement) {
+                        parentNode.removeChild(parentNode.documentElement);
+                        oldChildren[oldStartIndex] = undefined;
+                        oldStartNode = undefined;
+                    }
+                    parentNode.insertBefore(newNode, oldStartNode || null);
+                    diff(newNode, newStartNode, replayer, rrnodeMirror);
+                }
+                newStartNode = newChildren[++newStartIndex];
+            }
+        }
+        if (oldStartIndex > oldEndIndex) {
+            const referenceRRNode = newChildren[newEndIndex + 1];
+            let referenceNode = null;
+            if (referenceRRNode)
+                parentNode.childNodes.forEach((child) => {
+                    if (replayer.mirror.getId(child) === rrnodeMirror.getId(referenceRRNode))
+                        referenceNode = child;
+                });
+            for (; newStartIndex <= newEndIndex; ++newStartIndex) {
+                const newNode = createOrGetNode(newChildren[newStartIndex], replayer.mirror, rrnodeMirror);
+                parentNode.insertBefore(newNode, referenceNode);
+                diff(newNode, newChildren[newStartIndex], replayer, rrnodeMirror);
+            }
+        }
+        else if (newStartIndex > newEndIndex) {
+            for (; oldStartIndex <= oldEndIndex; oldStartIndex++) {
+                const node = oldChildren[oldStartIndex];
+                if (node) {
+                    parentNode.removeChild(node);
+                    replayer.mirror.removeNodeFromMap(node);
+                }
+            }
+        }
+    }
+    function createOrGetNode(rrNode, domMirror, rrnodeMirror) {
+        let node = domMirror.getNode(rrnodeMirror.getId(rrNode));
+        const sn = rrnodeMirror.getMeta(rrNode);
+        if (node !== null)
+            return node;
+        switch (rrNode.RRNodeType) {
+            case NodeType.Document:
+                node = new Document();
+                break;
+            case NodeType.DocumentType:
+                node = document.implementation.createDocumentType(rrNode.name, rrNode.publicId, rrNode.systemId);
+                break;
+            case NodeType.Element: {
+                rrNode.tagName.toLowerCase();
+                if (sn && 'isSVG' in sn && (sn === null || sn === void 0 ? void 0 : sn.isSVG)) {
+                    node = document.createElementNS(NAMESPACES['svg'], rrNode.tagName.toLowerCase());
+                }
+                else
+                    node = document.createElement(rrNode.tagName);
+                break;
+            }
+            case NodeType.Text:
+                node = document.createTextNode(rrNode.data);
+                break;
+            case NodeType.Comment:
+                node = document.createComment(rrNode.data);
+                break;
+            case NodeType.CDATA:
+                node = document.createCDATASection(rrNode.data);
+                break;
+        }
+        if (sn)
+            domMirror.add(node, Object.assign({}, sn));
+        return node;
+    }
+    function getNestedRule(rules, position) {
+        const rule = rules[position[0]];
+        if (position.length === 1) {
+            return rule;
+        }
+        else {
+            return getNestedRule(rule.cssRules[position[1]].cssRules, position.slice(2));
+        }
+    }
+    exports.StyleRuleType = void 0;
+    (function (StyleRuleType) {
+        StyleRuleType[StyleRuleType["Insert"] = 0] = "Insert";
+        StyleRuleType[StyleRuleType["Remove"] = 1] = "Remove";
+        StyleRuleType[StyleRuleType["Snapshot"] = 2] = "Snapshot";
+        StyleRuleType[StyleRuleType["SetProperty"] = 3] = "SetProperty";
+        StyleRuleType[StyleRuleType["RemoveProperty"] = 4] = "RemoveProperty";
+    })(exports.StyleRuleType || (exports.StyleRuleType = {}));
+    function getPositionsAndIndex(nestedIndex) {
+        const positions = [...nestedIndex];
+        const index = positions.pop();
+        return { positions, index };
+    }
+    function applyVirtualStyleRulesToNode(styleNode, virtualStyleRules) {
+        const sheet = styleNode.sheet;
+        virtualStyleRules.forEach((rule) => {
+            if (rule.type === exports.StyleRuleType.Insert) {
+                try {
+                    if (Array.isArray(rule.index)) {
+                        const { positions, index } = getPositionsAndIndex(rule.index);
+                        const nestedRule = getNestedRule(sheet.cssRules, positions);
+                        nestedRule.insertRule(rule.cssText, index);
+                    }
+                    else {
+                        sheet.insertRule(rule.cssText, rule.index);
+                    }
+                }
+                catch (e) {
+                }
+            }
+            else if (rule.type === exports.StyleRuleType.Remove) {
+                try {
+                    if (Array.isArray(rule.index)) {
+                        const { positions, index } = getPositionsAndIndex(rule.index);
+                        const nestedRule = getNestedRule(sheet.cssRules, positions);
+                        nestedRule.deleteRule(index || 0);
+                    }
+                    else {
+                        sheet.deleteRule(rule.index);
+                    }
+                }
+                catch (e) {
+                }
+            }
+            else if (rule.type === exports.StyleRuleType.SetProperty) {
+                const nativeRule = getNestedRule(sheet.cssRules, rule.index);
+                nativeRule.style.setProperty(rule.property, rule.value, rule.priority);
+            }
+            else if (rule.type === exports.StyleRuleType.RemoveProperty) {
+                const nativeRule = getNestedRule(sheet.cssRules, rule.index);
+                nativeRule.style.removeProperty(rule.property);
+            }
+        });
+    }
+
+    class RRDocument extends BaseRRDocumentImpl(BaseRRNode) {
+        constructor(mirror) {
+            super();
+            this._unserializedId = -1;
+            this.mirror = createMirror();
+            this.scrollData = null;
+            if (mirror) {
+                this.mirror = mirror;
+            }
+        }
+        get unserializedId() {
+            return this._unserializedId--;
+        }
+        createDocument(_namespace, _qualifiedName, _doctype) {
+            return new RRDocument();
+        }
+        createDocumentType(qualifiedName, publicId, systemId) {
+            const documentTypeNode = new RRDocumentType(qualifiedName, publicId, systemId);
+            documentTypeNode.ownerDocument = this;
+            return documentTypeNode;
+        }
+        createElement(tagName) {
+            const upperTagName = tagName.toUpperCase();
+            let element;
+            switch (upperTagName) {
+                case 'AUDIO':
+                case 'VIDEO':
+                    element = new RRMediaElement(upperTagName);
+                    break;
+                case 'IFRAME':
+                    element = new RRIFrameElement(upperTagName, this.mirror);
+                    break;
+                case 'CANVAS':
+                    element = new RRCanvasElement(upperTagName);
+                    break;
+                case 'STYLE':
+                    element = new RRStyleElement(upperTagName);
+                    break;
+                default:
+                    element = new RRElement(upperTagName);
+                    break;
+            }
+            element.ownerDocument = this;
+            return element;
+        }
+        createComment(data) {
+            const commentNode = new RRComment(data);
+            commentNode.ownerDocument = this;
+            return commentNode;
+        }
+        createCDATASection(data) {
+            const sectionNode = new RRCDATASection(data);
+            sectionNode.ownerDocument = this;
+            return sectionNode;
+        }
+        createTextNode(data) {
+            const textNode = new RRText(data);
+            textNode.ownerDocument = this;
+            return textNode;
+        }
+        destroyTree() {
+            this.childNodes = [];
+            this.mirror.reset();
+        }
+        open() {
+            super.open();
+            this._unserializedId = -1;
+        }
+    }
+    const RRDocumentType = BaseRRDocumentTypeImpl(BaseRRNode);
+    class RRElement extends BaseRRElementImpl(BaseRRNode) {
+        constructor() {
+            super(...arguments);
+            this.inputData = null;
+            this.scrollData = null;
+        }
+    }
+    class RRMediaElement extends BaseRRMediaElementImpl(RRElement) {
+    }
+    class RRCanvasElement extends RRElement {
+        constructor() {
+            super(...arguments);
+            this.canvasMutations = [];
+        }
+        getContext() {
+            return null;
+        }
+    }
+    class RRStyleElement extends RRElement {
+        constructor() {
+            super(...arguments);
+            this.rules = [];
+        }
+    }
+    class RRIFrameElement extends RRElement {
+        constructor(upperTagName, mirror) {
+            super(upperTagName);
+            this.contentDocument = new RRDocument();
+            this.contentDocument.mirror = mirror;
+        }
+    }
+    const RRText = BaseRRTextImpl(BaseRRNode);
+    const RRComment = BaseRRCommentImpl(BaseRRNode);
+    const RRCDATASection = BaseRRCDATASectionImpl(BaseRRNode);
+    function getValidTagName(element) {
+        if (element instanceof HTMLFormElement) {
+            return 'FORM';
+        }
+        return element.tagName.toUpperCase();
+    }
+    function buildFromNode(node, rrdom, domMirror, parentRRNode) {
+        let rrNode;
+        switch (node.nodeType) {
+            case exports.NodeType.DOCUMENT_NODE:
+                if (parentRRNode && parentRRNode.nodeName === 'IFRAME')
+                    rrNode = parentRRNode.contentDocument;
+                else {
+                    rrNode = rrdom;
+                    rrNode.compatMode = node.compatMode;
+                }
+                break;
+            case exports.NodeType.DOCUMENT_TYPE_NODE:
+                const documentType = node;
+                rrNode = rrdom.createDocumentType(documentType.name, documentType.publicId, documentType.systemId);
+                break;
+            case exports.NodeType.ELEMENT_NODE:
+                const elementNode = node;
+                const tagName = getValidTagName(elementNode);
+                rrNode = rrdom.createElement(tagName);
+                const rrElement = rrNode;
+                for (const { name, value } of Array.from(elementNode.attributes)) {
+                    rrElement.attributes[name] = value;
+                }
+                elementNode.scrollLeft && (rrElement.scrollLeft = elementNode.scrollLeft);
+                elementNode.scrollTop && (rrElement.scrollTop = elementNode.scrollTop);
+                break;
+            case exports.NodeType.TEXT_NODE:
+                rrNode = rrdom.createTextNode(node.textContent || '');
+                break;
+            case exports.NodeType.CDATA_SECTION_NODE:
+                rrNode = rrdom.createCDATASection(node.data);
+                break;
+            case exports.NodeType.COMMENT_NODE:
+                rrNode = rrdom.createComment(node.textContent || '');
+                break;
+            case exports.NodeType.DOCUMENT_FRAGMENT_NODE:
+                rrNode = parentRRNode.attachShadow({ mode: 'open' });
+                break;
+            default:
+                return null;
+        }
+        let sn = domMirror.getMeta(node);
+        if (rrdom instanceof RRDocument) {
+            if (!sn) {
+                sn = getDefaultSN(rrNode, rrdom.unserializedId);
+                domMirror.add(node, sn);
+            }
+            rrdom.mirror.add(rrNode, Object.assign({}, sn));
+        }
+        return rrNode;
+    }
+    function buildFromDom(dom, domMirror = createMirror$1(), rrdom = new RRDocument()) {
+        function walk(node, parentRRNode) {
+            const rrNode = buildFromNode(node, rrdom, domMirror, parentRRNode);
+            if (rrNode === null)
+                return;
+            if ((parentRRNode === null || parentRRNode === void 0 ? void 0 : parentRRNode.nodeName) !== 'IFRAME' &&
+                node.nodeType !== exports.NodeType.DOCUMENT_FRAGMENT_NODE) {
+                parentRRNode === null || parentRRNode === void 0 ? void 0 : parentRRNode.appendChild(rrNode);
+                rrNode.parentNode = parentRRNode;
+                rrNode.parentElement = parentRRNode;
+            }
+            if (node.nodeName === 'IFRAME') {
+                walk(node.contentDocument, rrNode);
+            }
+            else if (node.nodeType === exports.NodeType.DOCUMENT_NODE ||
+                node.nodeType === exports.NodeType.ELEMENT_NODE ||
+                node.nodeType === exports.NodeType.DOCUMENT_FRAGMENT_NODE) {
+                if (node.nodeType === exports.NodeType.ELEMENT_NODE &&
+                    node.shadowRoot)
+                    walk(node.shadowRoot, rrNode);
+                node.childNodes.forEach((childNode) => walk(childNode, rrNode));
+            }
+        }
+        walk(dom, null);
+        return rrdom;
+    }
+    function createMirror() {
+        return new Mirror();
+    }
+    class Mirror {
+        constructor() {
+            this.idNodeMap = new Map();
+            this.nodeMetaMap = new WeakMap();
+        }
+        getId(n) {
+            var _a;
+            if (!n)
+                return -1;
+            const id = (_a = this.getMeta(n)) === null || _a === void 0 ? void 0 : _a.id;
+            return id !== null && id !== void 0 ? id : -1;
+        }
+        getNode(id) {
+            return this.idNodeMap.get(id) || null;
+        }
+        getIds() {
+            return Array.from(this.idNodeMap.keys());
+        }
+        getMeta(n) {
+            return this.nodeMetaMap.get(n) || null;
+        }
+        removeNodeFromMap(n) {
+            const id = this.getId(n);
+            this.idNodeMap.delete(id);
+            if (n.childNodes) {
+                n.childNodes.forEach((childNode) => this.removeNodeFromMap(childNode));
+            }
+        }
+        has(id) {
+            return this.idNodeMap.has(id);
+        }
+        hasNode(node) {
+            return this.nodeMetaMap.has(node);
+        }
+        add(n, meta) {
+            const id = meta.id;
+            this.idNodeMap.set(id, n);
+            this.nodeMetaMap.set(n, meta);
+        }
+        replace(id, n) {
+            this.idNodeMap.set(id, n);
+        }
+        reset() {
+            this.idNodeMap = new Map();
+            this.nodeMetaMap = new WeakMap();
+        }
+    }
+    function getDefaultSN(node, id) {
+        switch (node.RRNodeType) {
+            case NodeType.Document:
+                return {
+                    id,
+                    type: node.RRNodeType,
+                    childNodes: [],
+                };
+            case NodeType.DocumentType:
+                const doctype = node;
+                return {
+                    id,
+                    type: node.RRNodeType,
+                    name: doctype.name,
+                    publicId: doctype.publicId,
+                    systemId: doctype.systemId,
+                };
+            case NodeType.Element:
+                return {
+                    id,
+                    type: node.RRNodeType,
+                    tagName: node.tagName.toLowerCase(),
+                    attributes: {},
+                    childNodes: [],
+                };
+            case NodeType.Text:
+                return {
+                    id,
+                    type: node.RRNodeType,
+                    textContent: node.textContent || '',
+                };
+            case NodeType.Comment:
+                return {
+                    id,
+                    type: node.RRNodeType,
+                    textContent: node.textContent || '',
+                };
+            case NodeType.CDATA:
+                return {
+                    id,
+                    type: node.RRNodeType,
+                    textContent: '',
+                };
+        }
+    }
+
+    exports.BaseRRCDATASectionImpl = BaseRRCDATASectionImpl;
+    exports.BaseRRCommentImpl = BaseRRCommentImpl;
+    exports.BaseRRDocumentImpl = BaseRRDocumentImpl;
+    exports.BaseRRDocumentTypeImpl = BaseRRDocumentTypeImpl;
+    exports.BaseRRElementImpl = BaseRRElementImpl;
+    exports.BaseRRMediaElementImpl = BaseRRMediaElementImpl;
+    exports.BaseRRNode = BaseRRNode;
+    exports.BaseRRTextImpl = BaseRRTextImpl;
+    exports.ClassList = ClassList;
+    exports.Mirror = Mirror;
+    exports.RRCDATASection = RRCDATASection;
+    exports.RRCanvasElement = RRCanvasElement;
+    exports.RRComment = RRComment;
+    exports.RRDocument = RRDocument;
+    exports.RRDocumentType = RRDocumentType;
+    exports.RRElement = RRElement;
+    exports.RRIFrameElement = RRIFrameElement;
+    exports.RRMediaElement = RRMediaElement;
+    exports.RRStyleElement = RRStyleElement;
+    exports.RRText = RRText;
+    exports.buildFromDom = buildFromDom;
+    exports.buildFromNode = buildFromNode;
+    exports.createMirror = createMirror;
+    exports.createOrGetNode = createOrGetNode;
+    exports.diff = diff;
+    exports.getDefaultSN = getDefaultSN;
+
+    Object.defineProperty(exports, '__esModule', { value: true });
+
+    return exports;
+
+})({});
