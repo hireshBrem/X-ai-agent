@@ -106,89 +106,234 @@ const EnvVarInput = ({
 }
 
 const AgentControls = () => {
-  // Environment variables state
-  const [openAIKey, setOpenAIKey] = useState(process.env.NEXT_PUBLIC_OPENAI_API_KEY || '')
-  const [browserbaseKey, setBrowserbaseKey] = useState(process.env.NEXT_PUBLIC_BROWSERBASE_API_KEY || '')
-  const [browserbaseProjectId, setBrowserbaseProjectId] = useState(process.env.NEXT_PUBLIC_BROWSERBASE_PROJECT_ID || '')
+    // Environment variables state
+    const [openAIKey, setOpenAIKey] = useState(process.env.NEXT_PUBLIC_OPENAI_API_KEY || '')
+    const [browserbaseKey, setBrowserbaseKey] = useState(process.env.NEXT_PUBLIC_BROWSERBASE_API_KEY || '')
+    const [browserbaseProjectId, setBrowserbaseProjectId] = useState(process.env.NEXT_PUBLIC_BROWSERBASE_PROJECT_ID || '')
+    const [contextId, setContextId] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
+    const [email, setEmail] = useState('')
+    const [password, setPassword] = useState('')
 
-  const [isLoading, setIsLoading] = useState(false)
-    
-  // Handler for running the agent
-  const handleRunAgent = async () => {
-    // Validate environment variables
-    if (!openAIKey) {
-      toast.error('Please enter your OpenAI API key')
-      return
-    }
-    
-    if (!browserbaseKey || !browserbaseProjectId) {
-      toast.error('Please enter your Browserbase credentials')
-      return
-    }
-
-    // Store browserbase key in localStorage
-    localStorage.setItem('browserbase_key', browserbaseKey.trim())
-
-    try {
-      setIsLoading(true)
-      // Empty function - to be implemented later
-    //   console.log('Run agent clicked: ', openAIKey, browserbaseKey, browserbaseProjectId)
-      
-    // POST to endpoint with openAIKey, browserbaseKey, browserbaseProjectId
-    const session = await fetch('http://localhost:8000/api/run-agent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            openai_key: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-            browserbase_key: process.env.NEXT_PUBLIC_BROWSERBASE_API_KEY,
-            browserbase_project_id: process.env.NEXT_PUBLIC_BROWSERBASE_PROJECT_ID
-        })
-    }).then(res => res.json())
-
-    console.log('Session: ', session)
-
-    // Create a session object with messages field
-    const sessionWithMessages = {
-      ...session,
-      browserbase_key: browserbaseKey.trim(), // Store browserbase key in session
-      messages: [
-        {
-          role: 'system',
-          content: 'Browser agent session started',
-          created_at: Math.floor(Date.now() / 1000)
+    useEffect(() => {
+        const contextId = localStorage.getItem('context_id')
+        console.log('Context ID: ', contextId)
+        if (contextId) {
+        setContextId(contextId)
         }
-      ]
-    };
+    }, [])
+        
+    // Handler for running the agent
+    const handleLogin = async () => {
+        // Validate environment variables
+        if (!openAIKey) {
+        toast.error('Please enter your OpenAI API key')
+        return
+        }
+        
+        if (!browserbaseKey || !browserbaseProjectId) {
+        toast.error('Please enter your Browserbase credentials')
+        return
+        }
 
-    // Append session to 'sessions' local storage
-    const sessions = JSON.parse(localStorage.getItem('sessions') || '[]')
-    localStorage.setItem('sessions', JSON.stringify([...sessions, sessionWithMessages]))
+        if (!email) {
+        toast.error('Please enter your email or username')
+        return
+        }
 
-      toast.success('Agent run initiated successfully!')
-    } catch (error) {
-      console.error('Error running agent:', error)
-      toast.error('Failed to run agent. Please try again.')
-    } finally {
-      setIsLoading(false)
+        if (!password) {
+        toast.error('Please enter your password')
+        return
+        }
+
+        // Store browserbase key in localStorage
+        localStorage.setItem('browserbase_key', browserbaseKey.trim())
+
+        try {
+        setIsLoading(true)
+        
+        // Create Context
+        if (!contextId) {
+            await handleCreateContext()
+        }
+        console.log('Context ID: ', contextId)
+
+        // POST to endpoint with openAIKey, browserbaseKey, browserbaseProjectId
+        const session = await fetch('http://localhost:8000/api/login-x', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                openai_key: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+                browserbase_key: process.env.NEXT_PUBLIC_BROWSERBASE_API_KEY,
+                browserbase_project_id: process.env.NEXT_PUBLIC_BROWSERBASE_PROJECT_ID,
+                contextId: contextId,
+                email: email,
+                password: password
+            })
+        }).then(res => res.json())
+
+        console.log('Session: ', session)
+
+        // Create a session object with messages field
+        const sessionWithMessages = {
+        ...session,
+        browserbase_key: browserbaseKey.trim(), // Store browserbase key in session
+        messages: [
+            {
+            role: 'system',
+            content: 'Browser agent session started',
+            created_at: Math.floor(Date.now() / 1000)
+            }
+        ]
+        };
+
+        // Append session to 'sessions' local storage
+        const sessions = JSON.parse(localStorage.getItem('sessions') || '[]')
+        localStorage.setItem('sessions', JSON.stringify([...sessions, sessionWithMessages]))
+
+        toast.success('Agent run initiated successfully!')
+        } catch (error) {
+        console.error('Error running agent:', error)
+        toast.error('Failed to run agent. Please try again.')
+        } finally {
+        setIsLoading(false)
+        }
     }
-  }
-  
-  return (
+
+    const handleRunAgent = async () => {
+
+         // Validate environment variables
+         if (!openAIKey) {
+            toast.error('Please enter your OpenAI API key')
+            return
+        }
+        
+        if (!browserbaseKey || !browserbaseProjectId) {
+        toast.error('Please enter your Browserbase credentials')
+        return
+        }
+
+        if (!contextId) {
+        toast.error('Please create a context first')
+        return
+        }
+
+        try {
+        setIsLoading(true)
+        
+        // POST to endpoint with openAIKey, browserbaseKey, browserbaseProjectId
+        const session = await fetch('http://localhost:8000/api/run-agent', {
+            method: 'POST',
+            headers: {
+            'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                openai_key: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
+                browserbase_key: process.env.NEXT_PUBLIC_BROWSERBASE_API_KEY,
+                browserbase_project_id: process.env.NEXT_PUBLIC_BROWSERBASE_PROJECT_ID,
+                contextId: contextId
+            })
+        }).then(res => res.json())
+
+        console.log('Session: ', session)
+
+        // Create a session object with messages field
+        const sessionWithMessages = {
+        ...session,
+        browserbase_key: browserbaseKey.trim(), // Store browserbase key in session
+        messages: [
+            {
+            role: 'system',
+            content: 'Browser agent session started',
+            created_at: Math.floor(Date.now() / 1000)
+            }
+        ]
+        };
+
+        // Append session to 'sessions' local storage
+        const sessions = JSON.parse(localStorage.getItem('sessions') || '[]')
+        localStorage.setItem('sessions', JSON.stringify([...sessions, sessionWithMessages]))
+
+        toast.success('Agent run initiated successfully!')
+        } catch (error) {
+        console.error('Error running agent:', error)
+        toast.error('Failed to run agent. Please try again.')
+        } finally {
+        setIsLoading(false)
+        }
+
+    }
+
+    const handleCreateContext = async () => {
+        const context = await fetch('http://localhost:3000/api/context', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+        }).then(res => res.json())
+
+        let contextId = context.contextId
+
+        // Store contextId in localStorage
+        localStorage.setItem('context_id', contextId)
+        setContextId(contextId)
+        console.log('Context ID: ', contextId)
+    }
+    
+    return (
     <div className="space-y-6">
+
+        <h1 className='text-xs text-muted'> Context ID: {contextId ? contextId : 'Not created. Login to create it automatically.'}</h1>
+        <div className="border-t border-gray-300 my-4 w-full" />
+
+        {/* Login Credentials */}
+        <div className="space-y-4">
+            <div className="text-sm font-medium">Login Credentials</div>
+            
+            <EnvVarInput
+              label="Email or Username"
+              value={email}
+              onChange={setEmail}
+              type="text"
+              placeholder="Enter your email or username"
+            />
+            
+            <EnvVarInput
+              label="Password"
+              value={password}
+              onChange={setPassword}
+              type="password"
+              placeholder="Enter your password"
+            />
+        </div>
+
+      {/* Login Button */}
+      <Button
+        onClick={handleLogin}
+        disabled={isLoading}
+        size="lg"
+        className="h-9 w-full rounded-xl bg-gray-900 text-xs text-white font-medium hover:bg-gray-900/80"
+      >
+        <span className="uppercase text-white">Login</span>
+      </Button>
+
+      {/* Divider */}
+      <div className="border-t border-gray-300 my-4 w-full" />
+
       {/* Run Agent Button */}
       <Button
         onClick={handleRunAgent}
-        // disabled={isLoading}
+        disabled={isLoading}
         size="lg"
         className="h-9 w-full rounded-xl bg-gray-900 text-xs text-white font-medium hover:bg-gray-900/80"
       >
         <span className="uppercase text-white">Run Agent</span>
       </Button>
-      
-      {/* <div className="border-t border-primary/15 py-2" /> */}
-      
+
+      <div className="border-t border-gray-300 my-4 w-full" />
+
       {/* Environment Variables */}
       <div className="space-y-4 mt-5">
         <div className="text-sm font-medium">Environment Variables</div>
@@ -228,7 +373,6 @@ const AgentControls = () => {
 const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false)
 
-  
   return (
     <motion.aside
       className="relative flex h-screen shrink-0 grow-0 flex-col overflow-hidden px-4 py-3 font-dmmono text-gray-900 border-r border-gray-200"
@@ -263,8 +407,8 @@ const Sidebar = () => {
       >
         <div className="mt-10"></div>
         <AgentControls />
-        <div className="h-4" />
-            <Sessions />
+        <div className="border-t border-gray-300 my-4 w-full" />
+        <Sessions />
         <div className="h-4" />
       </motion.div>
     </motion.aside>

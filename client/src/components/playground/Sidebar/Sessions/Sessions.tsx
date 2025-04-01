@@ -92,7 +92,7 @@ const Sessions = () => {
         localStorage.setItem('sessions', JSON.stringify([]))
         setSessions([])
     }
-  }, [sessionId])
+  }, [sessionId, sessions])
 
   // Effect to save messages to the current session
   useEffect(() => {
@@ -178,10 +178,10 @@ const Sessions = () => {
         ) : (
           <div className="flex flex-col gap-y-1 pr-1">
             {
-            sessions.length > 0 && sessions.map((session, index) => (   
+            sessions.length > 0 && [...sessions].reverse().map((session, index) => (   
             <div 
                 className={`flex justify-between items-center p-2 rounded-lg hover:bg-gray-100 cursor-pointer ${selectedSessionId === session.id ? 'bg-gray-100' : ''}`} 
-                key={index}
+                key={session.id}
                 onClick={() => handleSelectSession(session)}
             >
                 <h1 className="text-xs truncate max-w-[80%]" title={session?.id}>
@@ -190,7 +190,7 @@ const Sessions = () => {
                 <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleDeleteSession(index);
+                      handleDeleteSession(sessions.length - 1 - index);
                     }}
                     className="text-xs text-gray-500 hover:text-red-500"
                 >

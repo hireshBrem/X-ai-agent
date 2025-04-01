@@ -6,10 +6,10 @@ X (Twitter) AI Agent is an AI web agent that interacts with tweets, built using 
 
 ## Features
 
-- 🤖 AI-powered browser automation using LLMs
-- 🌐 Integration with Browserbase for reliable browser session management
-- 📱 Modern, responsive UI built with Next.js and Tailwind CSS
-- 🔄 Agent browsing session playback
+- 🤖 Autonomous - Auto-reply to tweets on X
+- 🌐 It's free - Literally all free tools (Browser-use and Browserbase) with limits
+- 📱 Simple-to-use UI - Even your grandma can use it lol 
+- 🔄 Observation - See your agent in action with agent browsing session playback
 
 ## Architecture
 
@@ -33,6 +33,14 @@ A Python backend built with:
 - **Browserbase** - Browser infrastructure for reliable web automation
 - **LangChain** - Framework for developing applications powered by language models
 - **Playwright** - Under-the-hood browser automation library
+
+## How It Works
+- You enter your X login credentials and click login, which creates a context (identified by the context id) for the agent to perform the login task (go to X.com and enter credentials and login). 
+- The first login step is provided in order to save login info (via cookies) for future agent tasks.
+- Next the user will click the run agent button, this will initiate an agent run (with saved context data, i.e auth) that will perform the task of commenting on a post on your For You page on X.
+- After the agent has performed the task, you will be able to view the session recording to see how the agent has performed the tasks.
+- Please note that all data (agent session data and agent context id) has been stored locally for privacy. 
+
 
 ## Getting Started
 
@@ -134,8 +142,9 @@ uv run main.py
 The server provides several API endpoints:
 
 - `POST http://localhost:8000/api/run-agent` - Run an automation agent with specified keys
-- `POST http://localhost:8000/api/get-session` - Get details of a specific Browserbase session
+- `POST http://localhost:8000/api/login-x` - Run an automation agent to login to X (only needed once at the start)
 - `POST http://localhost:3000/api/session` - Get session recording for session
+- `POST http://localhost:3000/api/live-view` - Get live view url for session (expires after session ends)
 
 
 ## Contributing
@@ -157,7 +166,3 @@ This project is licensed under the GPL License - see the LICENSE file for detail
 - [Browserbase](https://browserbase.com) for browser infrastructure
 - [Browser-use](https://github.com/browser-use/browser-use) for browser automation with LLMs
 - [Agent-UI](https://github.com/agno-agi/agent-ui) for agent's UI interface
-
-## Final note
-
-Have fun tweeting!

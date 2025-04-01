@@ -156,15 +156,15 @@ const ChatBlankState = () => {
           <h2 className='text-xl font-[600]'>Getting Started</h2>
           
           <div className='flex flex-col gap-3'>
-            <StepCard 
+          <StepCard 
               number={1} 
-              title="Login to Twitter" 
-              description="Open a new tab and login to Twitter."
+              title="Configure Environment" 
+              description="Install dependencies and set up your environment variables."
             />
             <StepCard 
               number={2} 
-              title="Configure Environment" 
-              description="Install dependencies and set up your environment variables for Twitter integration"
+              title="Authentication" 
+              description="Enter your X credentials and click the Login button. Wait for the agent to perform the login."
             />
             
             <StepCard 
@@ -176,7 +176,7 @@ const ChatBlankState = () => {
             <StepCard 
               number={4} 
               title="Wait for Results" 
-              description="Let the agent interact with tweets."
+              description="Let the agent interact with tweets. You can view the session recordings after the agent has finished."
             />
           </div>
         </motion.div>

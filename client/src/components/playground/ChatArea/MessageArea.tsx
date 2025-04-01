@@ -5,7 +5,7 @@ import Messages from './Messages'
 import ScrollToBottom from '@/components/playground/ChatArea/ScrollToBottom'
 import { StickToBottom } from 'use-stick-to-bottom'
 import { useQueryState } from 'nuqs'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
 // @ts-ignore
 import rrwebPlayer from 'rrweb-player'
@@ -22,6 +22,35 @@ const MessageArea = () => {
   const playerContainerRef = useRef<HTMLDivElement>(null)
   const playerInstanceRef = useRef<any>(null)
 
+  // More comprehensive cleanup function
+  const closeReplay = useCallback(() => {
+    // Set state
+    setShowReplay(false)
+    setReplayEvents(null)
+    
+    // Clean up player instance
+    if (playerInstanceRef.current) {
+      try {
+        // Stop the player
+        playerInstanceRef.current.pause()
+        
+        // Clean up DOM
+        if (playerContainerRef.current) {
+          while (playerContainerRef.current.firstChild) {
+            playerContainerRef.current.removeChild(playerContainerRef.current.firstChild)
+          }
+        }
+        
+        // Reset the player reference
+        playerInstanceRef.current = null
+      } catch (error) {
+        console.error("Error cleaning up player:", error)
+      }
+    }
+    
+    toast.success('Session replay closed')
+  }, [])
+
   // Cleanup player instance on component unmount or when hiding
   useEffect(() => {
     return () => {
@@ -31,6 +60,14 @@ const MessageArea = () => {
       }
     }
   }, [])
+
+  // Close replay player when session changes
+  useEffect(() => {
+    // If we have an active player and session changes, close the replay
+    if (showReplay && playerInstanceRef.current) {
+      closeReplay()
+    }
+  }, [sessionId, showReplay, closeReplay])
 
   const copyToClipboard = () => {
     if (sessionId) {
@@ -100,35 +137,6 @@ const MessageArea = () => {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  // More comprehensive cleanup function
-  const closeReplay = () => {
-    // Set state
-    setShowReplay(false)
-    setReplayEvents(null)
-    
-    // Clean up player instance
-    if (playerInstanceRef.current) {
-      try {
-        // Stop the player
-        playerInstanceRef.current.pause()
-        
-        // Clean up DOM
-        if (playerContainerRef.current) {
-          while (playerContainerRef.current.firstChild) {
-            playerContainerRef.current.removeChild(playerContainerRef.current.firstChild)
-          }
-        }
-        
-        // Reset the player reference
-        playerInstanceRef.current = null
-      } catch (error) {
-        console.error("Error cleaning up player:", error)
-      }
-    }
-    
-    toast.success('Session replay closed')
   }
 
   // Effect to initialize the player when events are loaded and container is ready
