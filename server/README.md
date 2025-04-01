@@ -1,6 +1,3 @@
-# Simple FastAPI Server
-
-A simple and neat REST API built with FastAPI.
 
 ## Installation
 
