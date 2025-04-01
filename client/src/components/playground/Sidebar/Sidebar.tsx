@@ -63,7 +63,8 @@ const EnvVarInput = ({
   const [isValueVisible, setIsValueVisible] = useState(false)
   const inputType = type === "password" && !isPasswordVisible ? "password" : "text"
   const shouldHideValue = (type !== "password" && !isValueVisible) || (type === "password" && !isPasswordVisible)
-  
+
+
   // Display masked value or actual value based on visibility state
   const displayValue = shouldHideValue && value ? 
     value.replace(/./g, '•') : 
@@ -114,6 +115,7 @@ const AgentControls = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [isAgentRunning, setIsAgentRunning] = useState(false)
 
     useEffect(() => {
         const contextId = localStorage.getItem('context_id')
@@ -157,7 +159,7 @@ const AgentControls = () => {
             await handleCreateContext()
         }
         console.log('Context ID: ', contextId)
-
+        setIsAgentRunning(true)
         // POST to endpoint with openAIKey, browserbaseKey, browserbaseProjectId
         const session = await fetch('http://localhost:8000/api/login-x', {
             method: 'POST',
@@ -199,6 +201,7 @@ const AgentControls = () => {
         toast.error('Failed to run agent. Please try again.')
         } finally {
         setIsLoading(false)
+        setIsAgentRunning(false)
         }
     }
 
@@ -222,7 +225,7 @@ const AgentControls = () => {
 
         try {
         setIsLoading(true)
-        
+        setIsAgentRunning(true)
         // POST to endpoint with openAIKey, browserbaseKey, browserbaseProjectId
         const session = await fetch('http://localhost:8000/api/run-agent', {
             method: 'POST',
@@ -262,6 +265,7 @@ const AgentControls = () => {
         toast.error('Failed to run agent. Please try again.')
         } finally {
         setIsLoading(false)
+        setIsAgentRunning(false)
         }
 
     }
@@ -284,6 +288,18 @@ const AgentControls = () => {
     
     return (
     <div className="space-y-6">
+        {/* Agent Running Indicator */}
+        {isAgentRunning ?
+          <div className="flex items-center justify-center space-x-2 py-2 text-xs bg-green-50 rounded-lg border border-green-200">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-green-500"></div>
+            <span className="text-green-700 font-medium">Agent is running...</span>
+          </div>
+         : 
+          <div className="flex items-center justify-center space-x-2 py-2 text-xs bg-red-50 rounded-lg border border-red-200">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-red-500"></div>
+            <span className="text-red-700 font-medium">Agent is not running...</span>
+          </div>
+        }
 
         <h1 className='text-xs text-muted'> Context ID: {contextId ? contextId : 'Not created. Login to create it automatically.'}</h1>
         <div className="border-t border-gray-300 my-4 w-full" />
