@@ -4,7 +4,7 @@ X (Twitter) AI Agent is an AI web agent that interacts with tweets, built using 
 
 ## Demo
  
-https://github.com/hireshb/X-Browser-Agent/raw/main/content/demo2.mp4
+https://github.com/hireshb/X-Browser-Agent/raw/main/demo.mp4
 
 ## Features
 
