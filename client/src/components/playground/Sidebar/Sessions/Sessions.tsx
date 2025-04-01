@@ -9,6 +9,8 @@ import { useQueryState } from 'nuqs'
 import SessionItem from './SessionItem'
 import SessionBlankState from './SessionBlankState'
 import useSessionLoader from '@/hooks/useSessionLoader'
+import { Button } from '@/components/ui/button'
+import { RefreshCw } from 'lucide-react'
 
 import { cn } from '@/lib/utils'
 import { FC } from 'react'
@@ -92,7 +94,7 @@ const Sessions = () => {
         localStorage.setItem('sessions', JSON.stringify([]))
         setSessions([])
     }
-  }, [sessionId, sessions])
+  }, []) // Only run on mount
 
   // Effect to save messages to the current session
   useEffect(() => {
@@ -164,9 +166,27 @@ const Sessions = () => {
     }
   }
 
+  const refreshSessions = useCallback(() => {
+    const sessionsData = localStorage.getItem('sessions')
+    if (sessionsData) {
+      setSessions(JSON.parse(sessionsData))
+    }
+  }, [])
+
   return (
     <div className="w-full">
-      <div className="mb-2 w-full text-xs font-medium uppercase">Agent Sessions</div>
+      <div className="mb-2 w-full flex justify-between items-center">
+        <span className="text-xs font-medium uppercase">Agent Sessions</span>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={refreshSessions}
+          title="Refresh sessions"
+        >
+          <RefreshCw className="h-4 w-4" />
+        </Button>
+      </div>
       <div
         className={`h-[calc(100vh-345px)] overflow-y-auto font-geist transition-all duration-300 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar]:transition-opacity [&::-webkit-scrollbar]:duration-300 ${isScrolling ? '[&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-background [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar]:opacity-0' : '[&::-webkit-scrollbar]:opacity-100'}`}
         onScroll={handleScroll}

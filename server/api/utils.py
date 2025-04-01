@@ -69,12 +69,12 @@ async def setup_agent(browser: Browser, context: UseBrowserbaseContext, openai_k
             llm=llm,
             browser=browser,
             browser_context=context,
-            sensitive_data=sensitive_data,
+            sensitive_data=sensitive_data
         )
     
     else:
         task = f"""
-            Go to https://x.com/home and find an interesting post, scroll down to the comment section, click the comment button, create a relevant comment and click Reply to post the comment.
+            Go to https://x.com/home and find an interesting post and write a relevant comment and click Reply button.
         """
 
         return Agent(
