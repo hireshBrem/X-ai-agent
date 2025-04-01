@@ -56,3 +56,6 @@ client/next-env.d.ts
 
 # Backup
 backup/**/node_modules
+backup/**/*.node
+**/@next/swc-*/**
+**/*.node
