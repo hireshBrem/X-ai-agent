@@ -1,5 +1,0 @@
-content/demo3.mp4 filter=lfs diff=lfs merge=lfs -text
-# Excluding content/demo.mp4 from LFS tracking - specific rule must come before wildcard
-content/demo.mp4 !filter !diff !merge !lfs
-# Track all other mp4 files with LFS
-*.mp4 filter=lfs diff=lfs merge=lfs -text
