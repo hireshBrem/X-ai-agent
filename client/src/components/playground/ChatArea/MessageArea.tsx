@@ -118,7 +118,7 @@ const MessageArea = () => {
       }
 
       const data = await response.json()
-      console.log("Received rrweb events:", data)
+    //   console.log("Received rrweb events:", data)
 
       // Basic validation: Check if data is an array
       if (Array.isArray(data) && data.length > 0) {
@@ -128,11 +128,11 @@ const MessageArea = () => {
       } else if (Array.isArray(data) && data.length === 0) {
         toast.info('No replay events found for this session.')
       } else {
-        console.error('Invalid data format received:', data)
+        // console.error('Invalid data format received:', data)
         toast.error('Failed to load replay: Invalid data format')
       }
     } catch (error) {
-      console.error('Error fetching session recording:', error)
+    //   console.error('Error fetching session recording:', error)
       toast.error('Error fetching session recording')
     } finally {
       setIsLoading(false)
@@ -162,7 +162,7 @@ const MessageArea = () => {
           },
         })
       } catch (error) {
-        console.error("Failed to initialize rrweb player:", error)
+        // console.error("Failed to initialize rrweb player:", error)
         toast.error("Failed to initialize replay player.")
         setShowReplay(false)
         setReplayEvents(null)

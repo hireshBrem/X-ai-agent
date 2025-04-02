@@ -57,7 +57,6 @@ async def setup_agent(browser: Browser, context: UseBrowserbaseContext, openai_k
     )
 
     if email and password:
-        print("Logging in!!!")
         sensitive_data = {'x_name': email, 'x_password': password}
 
         task = f"""

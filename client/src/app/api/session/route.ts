@@ -11,7 +11,7 @@ export async function POST(request: Request) {
 
     // Get the session replay for the given session id
     const replay = await bb.sessions.recording.retrieve(body.session_id);
-    console.log("REPLAY:", replay);
+    // console.log("REPLAY:", replay);
 
 
     // Return the fetched replay data as JSON

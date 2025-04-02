@@ -86,7 +86,7 @@ const Sessions = () => {
   useEffect(() => {
     // Get sessions from local storage
     const sessionsData = localStorage.getItem('sessions')
-    console.log('Sessions: ', sessionsData)
+    // console.log('Sessions: ', sessionsData)
     if (sessionsData) {
         setSessions(JSON.parse(sessionsData))
     }else{

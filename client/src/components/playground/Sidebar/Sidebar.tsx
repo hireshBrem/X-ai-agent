@@ -119,9 +119,9 @@ const AgentControls = () => {
 
     useEffect(() => {
         const contextId = localStorage.getItem('context_id')
-        console.log('Context ID: ', contextId)
+        // console.log('Context ID: ', contextId)
         if (contextId) {
-        setContextId(contextId)
+            setContextId(contextId)
         }
     }, [])
         
@@ -158,7 +158,7 @@ const AgentControls = () => {
         if (!contextId) {
             await handleCreateContext()
         }
-        console.log('Context ID: ', contextId)
+        // console.log('Context ID: ', contextId)
         setIsAgentRunning(true)
         // POST to endpoint with openAIKey, browserbaseKey, browserbaseProjectId
         const session = await fetch('http://localhost:8000/api/login-x', {
@@ -176,7 +176,7 @@ const AgentControls = () => {
             })
         }).then(res => res.json())
 
-        console.log('Session: ', session)
+        // console.log('Session: ', session)
 
         // Create a session object with messages field
         const sessionWithMessages = {
@@ -197,7 +197,7 @@ const AgentControls = () => {
 
         toast.success('Agent run initiated successfully!')
         } catch (error) {
-        console.error('Error running agent:', error)
+        // console.error('Error running agent:', error)
         toast.error('Failed to run agent. Please try again.')
         } finally {
         setIsLoading(false)
@@ -240,7 +240,7 @@ const AgentControls = () => {
             })
         }).then(res => res.json())
 
-        console.log('Session: ', session)
+        // console.log('Session: ', session)
 
         // Create a session object with messages field
         const sessionWithMessages = {
@@ -283,7 +283,7 @@ const AgentControls = () => {
         // Store contextId in localStorage
         localStorage.setItem('context_id', contextId)
         setContextId(contextId)
-        console.log('Context ID: ', contextId)
+        // console.log('Context ID: ', contextId)
     }
     
     return (

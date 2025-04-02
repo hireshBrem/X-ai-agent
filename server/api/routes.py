@@ -11,15 +11,11 @@ async def get_session(request: Request):
     browserbase_key = data.get("browserbase_key")
     session_id = data.get("session_id")
 
-    print(browserbase_key, session_id)
-
     url = f"https://api.browserbase.com/v1/sessions/{session_id}"
 
     headers = {"X-BB-API-Key": browserbase_key}
 
     response = requests.request("GET", url, headers=headers)
-
-    print(response.text)
 
     return response.text
 
@@ -73,7 +69,7 @@ async def login_x(request: Request):
     email = data.get("email")
     password = data.get("password")
 
-    print(browserbase_key, browserbase_project_id, openai_key, contextId, email, password)
+    # print(browserbase_key, browserbase_project_id, openai_key, contextId, email, password)
 
     # Setup browser and context
     browser, context, bb_session = await setup_browser(
@@ -95,10 +91,6 @@ async def login_x(request: Request):
     finally: 
         # Close browser
         await browser.close()
-
-
-    print("Session: ", session)
-    print("BB Session: ", bb_session)
 
     # Return session 
     return bb_session

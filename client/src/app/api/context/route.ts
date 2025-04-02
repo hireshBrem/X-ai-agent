@@ -8,7 +8,7 @@ export async function GET(request: Request) {
     const contextId:any = await bb.contexts.create({
     projectId: process.env.BROWSERBASE_PROJECT_ID!,
     }).then((context) => {
-        console.log("Context ID:", context.id);
+        // console.log("Context ID:", context.id);
         return context.id;
     }).catch((error) => {
         console.error("Error:", error);
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
         },
     });
 
-    console.log("Session ID:", session.id)
+    // console.log("Session ID:", session.id)
 
     const liveViewLinks = await bb.sessions.debug(session.id);
     const liveViewLink = liveViewLinks.debuggerFullscreenUrl;
